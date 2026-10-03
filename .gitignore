@@ -1,0 +1,5 @@
+node_modules/
+chat.db
+history.json
+npm-debug.log
+*.log

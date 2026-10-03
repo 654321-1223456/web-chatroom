@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>聊天室</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; }
+  body { display: flex; background: #0f1117; color: #e6e6e6; }
+  #side { width: 210px; background: #161922; border-right: 1px solid #232733; display: flex; flex-direction: column; }
+  #side h3 { margin: 0; padding: 14px; font-size: 15px; border-bottom: 1px solid #232733; color: #8ab4ff; }
+  .sec-title { padding: 10px 14px 4px; font-size: 12px; color: #6b7280; }
+  #channels, #users { list-style: none; margin: 0; padding: 0 8px; overflow-y: auto; }
+  #channels li { padding: 7px 10px; border-radius: 6px; cursor: pointer; font-size: 14px; display: flex; justify-content: space-between; align-items: center; }
+  #channels li:hover { background: #1f2430; }
+  #channels li.active { background: #2b3450; color: #8ab4ff; }
+  .lock { font-size: 11px; color: #ffb454; }
+  #users li { padding: 4px 10px; font-size: 13px; color: #9aa3b2; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
+  #users li .nm { cursor: pointer; }
+  #users li .nm:hover { color: #8ab4ff; }
+  .kick { font-size: 11px; color: #ff6b6b; cursor: pointer; padding: 0 4px; }
+  #addChannel { display: flex; padding: 8px; gap: 6px; }
+  #addChannel input { flex: 1; background: #0f1117; border: 1px solid #2a2f3a; color: #e6e6e6; border-radius: 6px; padding: 6px; }
+  #main { flex: 1; display: flex; flex-direction: column; }
+  #bar { padding: 12px 16px; border-bottom: 1px solid #232733; display: flex; align-items: center; gap: 10px; }
+  #bar .ch { font-weight: 600; color: #8ab4ff; }
+  #bar .locktag { font-size: 11px; color: #ffb454; }
+  #bar .me { margin-left: auto; font-size: 13px; color: #9aa3b2; }
+  #bar input { background: #0f1117; border: 1px solid #2a2f3a; color: #e6e6e6; border-radius: 6px; padding: 5px 8px; width: 120px; }
+  #log { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+  .msg .name { font-weight: 600; color: #8ab4ff; }
+  .msg .time { font-size: 11px; color: #6b7280; margin-left: 6px; }
+  .msg .text { margin-top: 2px; line-height: 1.5; word-break: break-word; }
+  .msg img { max-width: 240px; max-height: 240px; border-radius: 8px; margin-top: 4px; display: block; }
+  .mention { color: #ffb454; font-weight: 600; }
+  .whisper { background: #1c1430; border-left: 3px solid #b07cff; padding: 6px 10px; border-radius: 6px; font-size: 13px; }
+  .whisper .tag { color: #b07cff; font-weight: 600; }
+  .sys { font-size: 12px; color: #6b7280; text-align: center; }
+  .date-sep { font-size: 11px; color: #4b5563; text-align: center; margin: 6px 0 2px; }
+  #inputBar { display: flex; padding: 12px; border-top: 1px solid #232733; gap: 8px; position: relative; }
+  #inputBar input.txt { flex: 1; background: #0f1117; border: 1px solid #2a2f3a; color: #e6e6e6; border-radius: 8px; padding: 10px 12px; font-size: 14px; }
+  #inputBar button { background: #2b3450; color: #fff; border: 0; border-radius: 8px; padding: 0 14px; cursor: pointer; }
+  #inputBar button:hover { background: #34406a; }
+  .iconbtn { background: #1f2430 !important; padding: 0 12px !important; }
+  #emojiPanel { position: absolute; bottom: 56px; left: 12px; background: #161922; border: 1px solid #2a2f3a; border-radius: 8px; padding: 8px; display: none; grid-template-columns: repeat(8, 1fr); gap: 2px; width: 320px; max-height: 180px; overflow-y: auto; z-index: 10; }
+  #emojiPanel span { cursor: pointer; font-size: 18px; text-align: center; padding: 4px; border-radius: 4px; }
+  #emojiPanel span:hover { background: #2b3450; }
+  .hint { font-size: 11px; color: #4b5563; padding: 0 12px 6px; }
+  #fileInput { display: none; }
+</style>
+</head>
+<body>
+  <div id="side">
+    <h3>💬 聊天室</h3>
+    <div class="sec-title">频道</div>
+    <ul id="channels"></ul>
+    <div id="addChannel"><input id="newCh" placeholder="频道名 或 名:密码" maxlength="24"><button id="addBtn">+</button></div>
+    <div class="sec-title">在线 (#<span id="curCh">general</span>)</div>
+    <ul id="users"></ul>
+  </div>
+  <div id="main">
+    <div id="bar">
+      <span class="ch">#<span id="chName">general</span></span>
+      <span class="locktag" id="lockTag"></span>
+      <span class="me">我是 <input id="nick" maxlength="16"></span>
+    </div>
+    <div id="log"></div>
+    <div class="hint">/@昵称 提醒 · /w 昵称 消息 私聊 · 点用户名私聊 · 公开频道建加密频道用「名:密码」</div>
+    <div id="inputBar">
+      <button class="iconbtn" id="emojiBtn" title="表情">😀</button>
+      <button class="iconbtn" id="imgBtn" title="图片">📎</button>
+      <input class="txt" id="text" placeholder="输入消息，回车发送…" autofocus>
+      <button id="send">发送</button>
+      <div id="emojiPanel"></div>
+      <input type="file" id="fileInput" accept="image/*">
+    </div>
+  </div>
+
+<script>
+  const ws = new WebSocket(`ws://${location.host}`);
+  let myName = '', curChannel = 'general', curIsOwner = false, lastDate = null;
+  const $ = (id) => document.getElementById(id);
+  const log = $('log');
+  const EMOJIS = '😀😁😂🤣😊😍😘😎🤔😴😭😡👍👎👏🙏💪❤️🔥⭐🌹🎉🍺☕🚀💡⚡🌈😇🤝💯🐱🐶🌟💥🎈'.match(/./gu);
+
+  function dateSepText(d) {
+    const today = new Date().toISOString().slice(0, 10);
+    const y = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    if (d === today) return '今天';
+    if (d === y) return '昨天';
+    return d;
+  }
+  function addDateSep(d) {
+    const s = document.createElement('div'); s.className = 'date-sep'; s.textContent = '— ' + dateSepText(d) + ' —';
+    log.appendChild(s); lastDate = d;
+  }
+  function setTextWithMentions(el, text) {
+    const re = /@([^\s@]+)/g; let last = 0; let mm;
+    while ((mm = re.exec(text))) {
+      if (mm.index > last) el.appendChild(document.createTextNode(text.slice(last, mm.index)));
+      const s = document.createElement('span'); s.className = 'mention'; s.textContent = '@' + mm[1];
+      el.appendChild(s); last = re.lastIndex;
+    }
+    if (last < text.length) el.appendChild(document.createTextNode(text.slice(last)));
+  }
+  function addMsg(name, text, time, date, image) {
+    if (date && date !== lastDate) addDateSep(date);
+    const d = document.createElement('div'); d.className = 'msg';
+    d.innerHTML = `<span class="name"></span><span class="time"></span><div class="text"></div>`;
+    d.querySelector('.name').textContent = name;
+    d.querySelector('.time').textContent = time || '';
+    if (image) { const img = document.createElement('img'); img.src = image; d.querySelector('.text').appendChild(img); }
+    if (text) setTextWithMentions(d.querySelector('.text'), text);
+    log.appendChild(d); log.scrollTop = log.scrollHeight;
+  }
+  function addWhisper(from, to, text, time, dir) {
+    const d = document.createElement('div'); d.className = 'whisper';
+    const tag = dir === 'out' ? `私聊 → ${to}` : `私聊 ← ${from}`;
+    d.innerHTML = `<span class="tag"></span> <span class="time"></span><div class="text"></div>`;
+    d.querySelector('.tag').textContent = tag;
+    d.querySelector('.time').textContent = time || '';
+    d.querySelector('.text').textContent = text;
+    log.appendChild(d); log.scrollTop = log.scrollHeight;
+  }
+  function addSys(t) { const d = document.createElement('div'); d.className = 'sys'; d.textContent = t; log.appendChild(d); log.scrollTop = log.scrollHeight; }
+
+  ws.onopen = () => { $('nick').focus(); };
+  ws.onmessage = (e) => {
+    const m = JSON.parse(e.data);
+    if (m.type === 'welcome') { myName = m.name; curChannel = m.channel; $('nick').value = myName; $('chName').textContent = curChannel; }
+    else if (m.type === 'channels') { renderChannels(m.list); }
+    else if (m.type === 'users') { if (m.channel === curChannel) renderUsers(m.list); }
+    else if (m.type === 'channelInfo') { curIsOwner = !!m.isOwner; $('lockTag').textContent = m.locked ? '🔒' : ''; renderUsers(channelUsersCache); }
+    else if (m.type === 'switched') { curChannel = m.channel; $('chName').textContent = curChannel; $('curCh').textContent = curChannel; log.innerHTML = ''; lastDate = null; addSys(`— 已进入 #${curChannel} —`); }
+    else if (m.type === 'history') { log.innerHTML = ''; lastDate = null; addSys('— 以下为历史消息 —'); (m.messages || []).forEach(x => addMsg(x.name, x.text, x.time, x.date, x.image)); }
+    else if (m.type === 'chat') { addMsg(m.name, m.text, m.time, m.date, m.image); }
+    else if (m.type === 'mention') { addSys(`💬 ${m.from} 在 #${m.channel} @了你：${m.text}`); document.title = '💬 有人@你'; setTimeout(() => document.title = '聊天室', 3000); }
+    else if (m.type === 'whisper') { addWhisper(m.from, m.to, m.text, m.time, m.dir); }
+    else if (m.type === 'denied') { const pw = prompt(`#${m.channel} 需要密码：`); if (pw !== null) ws.send(JSON.stringify({ type: 'switch', channel: m.channel, password: pw })); }
+    else if (m.type === 'kicked') { addSys(`⚠️ 你已被房主移出 #${m.channel}`); }
+    else if (m.type === 'sys') { addSys(m.text); }
+  };
+
+  let channelUsersCache = [];
+  function renderChannels(list) {
+    const ul = $('channels'); ul.innerHTML = '';
+    list.forEach(ch => {
+      const li = document.createElement('li');
+      const name = document.createElement('span'); name.textContent = '#' + ch.name;
+      li.appendChild(name);
+      if (ch.locked) { const l = document.createElement('span'); l.className = 'lock'; l.textContent = '🔒'; li.appendChild(l); }
+      if (ch.name === curChannel) li.className = 'active';
+      li.onclick = () => { if (ch.name !== curChannel) ws.send(JSON.stringify({ type: 'switch', channel: ch.name })); };
+      ul.appendChild(li);
+    });
+  }
+  function renderUsers(list) {
+    channelUsersCache = list || [];
+    const ul = $('users'); ul.innerHTML = '';
+    (list || []).forEach(n => {
+      const li = document.createElement('li');
+      const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = '● ' + n;
+      nm.onclick = () => { $('text').value = '/w ' + n + ' '; $('text').focus(); };
+      li.appendChild(nm);
+      if (curIsOwner && n !== myName) {
+        const k = document.createElement('span'); k.className = 'kick'; k.textContent = '踢';
+        k.onclick = () => { if (confirm(`将 ${n} 移出 #${curChannel}？`)) ws.send(JSON.stringify({ type: 'kick', target: n })); };
+        li.appendChild(k);
+      }
+      ul.appendChild(li);
+    });
+  }
+
+  function sendMsg() {
+    const raw = $('text').value;
+    const t = raw.trim();
+    if (!t) return;
+    const m = t.match(/^\/(w|whisper)\s+(\S+)\s+([\s\S]+)$/);
+    if (m) ws.send(JSON.stringify({ type: 'whisper', to: m[2], text: m[3] }));
+    else ws.send(JSON.stringify({ type: 'msg', text: t }));
+    $('text').value = '';
+  }
+  $('send').onclick = sendMsg;
+  $('text').addEventListener('keydown', e => { if (e.key === 'Enter') sendMsg(); });
+  $('nick').addEventListener('change', () => { const n = $('nick').value.trim(); if (n && n !== myName) { ws.send(JSON.stringify({ type: 'join', name: n })); myName = n; } });
+  $('addBtn').onclick = () => {
+    const v = $('newCh').value.trim(); if (!v) return;
+    const [name, pw] = v.split(/:(.*)/s); // 名:密码
+    ws.send(JSON.stringify({ type: 'switch', channel: name.trim(), password: (pw || '').trim() }));
+    $('newCh').value = '';
+  };
+  $('newCh').addEventListener('keydown', e => { if (e.key === 'Enter') $('addBtn').click(); });
+
+  // 表情面板
+  const ep = $('emojiPanel');
+  EMOJIS.forEach(em => { const s = document.createElement('span'); s.textContent = em; s.onclick = () => { $('text').value += em; $('text').focus(); }; ep.appendChild(s); });
+  $('emojiBtn').onclick = () => { ep.style.display = ep.style.display === 'grid' ? 'none' : 'grid'; };
+
+  // 图片上传
+  $('imgBtn').onclick = () => $('fileInput').click();
+  $('fileInput').onchange = () => {
+    const f = $('fileInput').files[0]; if (!f) return;
+    if (f.size > 1200000) { alert('图片超过 1.2MB，请压缩后再发'); $('fileInput').value = ''; return; }
+    const r = new FileReader();
+    r.onload = () => { ws.send(JSON.stringify({ type: 'msg', image: r.result })); };
+    r.readAsDataURL(f);
+    $('fileInput').value = '';
+  };
+</script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+{
+  "name": "web-chatroom",
+  "version": "2.0.0",
+  "description": "可联机多频道网页聊天室（Node.js + ws + 内置 SQLite 持久化）",
+  "main": "server.js",
+  "scripts": { "start": "node --experimental-sqlite server.js" },
+  "engines": { "node": ">=22" },
+  "dependencies": { "ws": "^8.18.0" }
+}
