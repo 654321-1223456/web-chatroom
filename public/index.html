@@ -48,6 +48,35 @@
   #emojiPanel span:hover { background: #2b3450; }
   .hint { font-size: 11px; color: #4b5563; padding: 0 12px 6px; }
   #fileInput { display: none; }
+  /* 登录界面 / 管理员控制台 */
+  #loginView, #adminView { position: fixed; inset: 0; background: #0f1117; display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
+  #adminView { background: rgba(8,10,16,.96); flex-direction: column; align-items: stretch; }
+  .login-card { width: min(420px, 92vw); background: #161922; border: 1px solid #232733; border-radius: 14px; padding: 22px; box-shadow: 0 10px 40px rgba(0,0,0,.5); }
+  .login-card h2 { margin: 0 0 4px; font-size: 20px; color: #8ab4ff; }
+  .login-card p.sub { margin: 0 0 16px; font-size: 13px; color: #9aa3b2; }
+  .login-opt { border: 1px solid #2a2f3a; border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+  .login-opt .t { font-size: 15px; font-weight: 600; color: #e6e6e6; }
+  .login-opt .d { font-size: 12px; color: #9aa3b2; margin: 4px 0 10px; }
+  .login-opt input { width: 100%; box-sizing: border-box; background: #0f1117; border: 1px solid #2a2f3a; color: #e6e6e6; border-radius: 8px; padding: 10px 12px; font-size: 14px; margin-bottom: 8px; }
+  .login-opt input:focus { outline: none; border-color: #8ab4ff; }
+  .btn-primary { width: 100%; background: #2b3450; color: #fff; border: 0; border-radius: 8px; padding: 11px; font-size: 15px; cursor: pointer; }
+  .btn-primary:hover { background: #34406a; }
+  .btn-ghost { width: 100%; background: #1f2430; color: #cdd6e4; border: 1px solid #2b3240; border-radius: 8px; padding: 11px; font-size: 15px; cursor: pointer; }
+  .btn-ghost:hover { background: #2b3450; }
+  #loginErr { color: #ff6b6b; font-size: 13px; min-height: 18px; margin-top: 4px; text-align: center; }
+  #adminView .ahead { display: flex; align-items: center; padding: 14px 18px; border-bottom: 1px solid #232733; }
+  #adminView .ahead h2 { margin: 0; font-size: 18px; color: #ffb454; }
+  #adminView .ahead .close { margin-left: auto; background: #1f2430; color: #cdd6e4; border: 0; border-radius: 8px; padding: 8px 14px; cursor: pointer; }
+  #adminList { flex: 1; overflow-y: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; }
+  .admin-item { background: #161922; border: 1px solid #232733; border-radius: 10px; padding: 10px 12px; }
+  .admin-item .meta { font-size: 13px; color: #9aa3b2; }
+  .admin-item .meta .nm { color: #8ab4ff; font-weight: 600; }
+  .admin-item .body { margin: 4px 0; font-size: 14px; color: #e6e6e6; word-break: break-word; }
+  .admin-item .acts { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .admin-item .acts button { background: #1f2430; color: #cdd6e4; border: 1px solid #2b3240; border-radius: 6px; padding: 5px 10px; cursor: pointer; font-size: 13px; }
+  .admin-item .acts .del { color: #ff6b6b; border-color: #4a2630; }
+  .admin-item .geo { font-size: 12px; color: #6b7280; }
+
   /* 游戏板块：国际象棋 */
   #gameBtn { background: #1f2430; color: #8ab4ff; border: 0; border-radius: 6px; padding: 0 12px; cursor: pointer; font-size: 16px; }
   #gameView { display: none; flex-direction: column; align-items: center; justify-content: flex-start; gap: 12px; padding: 16px; flex: 1; overflow: auto; }
@@ -87,6 +116,32 @@
 </style>
 </head>
 <body>
+  <!-- 登录界面 -->
+  <div id="loginView">
+    <div class="login-card">
+      <h2>💬 聊天室登录</h2>
+      <p class="sub">请选择登录方式进入公开房间</p>
+      <div class="login-opt">
+        <div class="t">访客登录</div>
+        <div class="d">仅可查看消息，无法发言或操作</div>
+        <button class="btn-ghost" id="guestLoginBtn">以访客身份进入</button>
+      </div>
+      <div class="login-opt">
+        <div class="t">昵称登录</div>
+        <div class="d">填写发言时显示的名字（必填）</div>
+        <input id="loginName" maxlength="16" placeholder="你的名字">
+        <div class="d">管理口令（可选，填对特殊数字进入管理员）</div>
+        <input id="loginCode" inputmode="numeric" placeholder="可选，管理口令">
+        <button class="btn-primary" id="nameLoginBtn">进入聊天室</button>
+      </div>
+      <div id="loginErr"></div>
+    </div>
+  </div>
+  <!-- 管理员控制台 -->
+  <div id="adminView" style="display:none;">
+    <div class="ahead"><h2>🛡 管理员控制台</h2><button class="close" id="adminClose">关闭</button></div>
+    <div id="adminList"></div>
+  </div>
   <div id="side">
     <button id="sideClose" title="关闭">✕</button>
     <h3>💬 聊天室</h3>
@@ -99,6 +154,7 @@
     <div id="bar">
       <button id="menuBtn" title="在线列表">☰</button>
       <button id="gameBtn" title="小游戏">🎮</button>
+      <button id="adminBtn" style="display:none;" title="管理">🛡</button>
       <span class="ch">公开房间</span>
       <span class="me">我是 <input id="nick" maxlength="16"></span>
     </div>
@@ -133,6 +189,7 @@
   const wsProto = location.protocol === 'https:' ? 'wss' : 'ws';
   const ws = new WebSocket(`${wsProto}://${location.host}`);
   let myName = '', curChannel = 'general', curIsOwner = false, lastDate = null;
+  let myRole = '', wsReady = false, pendingLogin = null, adminFeed = [];
   const $ = (id) => document.getElementById(id);
   const log = $('log');
   const EMOJIS = '😀😁😂🤣😊😍😘😎🤔😴😭😡👍👎👏🙏💪❤️🔥⭐🌹🎉🍺☕🚀💡⚡🌈😇🤝💯🐱🐶🌟💥🎈'.match(/./gu);
@@ -157,9 +214,10 @@
     }
     if (last < text.length) el.appendChild(document.createTextNode(text.slice(last)));
   }
-  function addMsg(name, text, time, date, image) {
+  function addMsg(name, text, time, date, image, id) {
     if (date && date !== lastDate) addDateSep(date);
     const d = document.createElement('div'); d.className = 'msg';
+    if (id != null) d.dataset.id = id;
     d.innerHTML = `<span class="name"></span><span class="time"></span><div class="text"></div>`;
     d.querySelector('.name').textContent = name;
     d.querySelector('.time').textContent = time || '';
@@ -178,16 +236,25 @@
   }
   function addSys(t) { const d = document.createElement('div'); d.className = 'sys'; d.textContent = t; log.appendChild(d); log.scrollTop = log.scrollHeight; }
 
-  ws.onopen = () => { $('nick').focus(); };
+  ws.onopen = () => {
+    wsReady = true;
+    $('nick').focus();
+    if (pendingLogin) { ws.send(JSON.stringify(pendingLogin)); pendingLogin = null; }
+  };
   ws.onmessage = (e) => {
     const m = JSON.parse(e.data);
-    if (m.type === 'welcome') { myName = m.name; curChannel = m.channel; $('nick').value = myName; }
+    if (m.type === 'welcome') { myName = m.name; myRole = m.role || 'user'; curChannel = m.channel; $('nick').value = myName; $('loginView').style.display = 'none'; applyRole(); }
+    else if (m.type === 'login_fail') { $('loginErr').textContent = m.reason || '登录失败'; }
     else if (m.type === 'users') { renderUsers(m.list); }
-    else if (m.type === 'history') { log.innerHTML = ''; lastDate = null; addSys('— 以下为历史消息 —'); (m.messages || []).forEach(x => addMsg(x.name, x.text, x.time, x.date, x.image)); }
-    else if (m.type === 'chat') { addMsg(m.name, m.text, m.time, m.date, m.image); }
+    else if (m.type === 'history') { log.innerHTML = ''; lastDate = null; addSys('— 以下为历史消息 —'); (m.messages || []).forEach(x => addMsg(x.name, x.text, x.time, x.date, x.image, x.id)); }
+    else if (m.type === 'chat') { addMsg(m.name, m.text, m.time, m.date, m.image, m.id); }
+    else if (m.type === 'delete_msg') { removeMsgDom(m.id); adminFeed = adminFeed.filter(x => x.id !== m.id); if ($('adminView').style.display !== 'none') renderAdmin(); }
     else if (m.type === 'mention') { addSys(`💬 ${m.from} @了你：${m.text}`); document.title = '💬 有人@你'; setTimeout(() => document.title = '聊天室', 3000); }
     else if (m.type === 'whisper') { addWhisper(m.from, m.to, m.text, m.time, m.dir); }
     else if (m.type === 'sys') { addSys(m.text); }
+    else if (m.type === 'admin_recent') { adminFeed = m.messages || []; if ($('adminView').style.display !== 'none') renderAdmin(); }
+    else if (m.type === 'admin_msg') { adminFeed.push(m); if (adminFeed.length > 100) adminFeed.shift(); if ($('adminView').style.display !== 'none') renderAdmin(); }
+    else if (m.type === 'admin_geo') { const el = document.querySelector('#adminList [data-id="' + m.id + '"] .geo'); if (el) el.textContent = '📍 ' + m.geo; }
     else if (m.type === 'chess_wait' || m.type === 'chess_start' || m.type === 'chess_state' || m.type === 'chess_err' || m.type === 'chess_end') { if (window.ChessGame) window.ChessGame.handle(m); }
   };
 
@@ -235,6 +302,62 @@
   $('menuBtn').onclick = () => { $('side').classList.add('open'); $('overlay').classList.add('show'); };
   $('sideClose').onclick = () => { $('side').classList.remove('open'); $('overlay').classList.remove('show'); };
   $('overlay').onclick = () => { $('side').classList.remove('open'); $('overlay').classList.remove('show'); };
+
+  // ===================== 登录 / 权限 =====================
+  function doLogin(payload) {
+    if (!wsReady) { pendingLogin = payload; return; }
+    ws.send(JSON.stringify(payload));
+  }
+  $('guestLoginBtn').onclick = () => doLogin({ type: 'login', mode: 'guest' });
+  $('nameLoginBtn').onclick = () => {
+    const name = $('loginName').value.trim();
+    const code = $('loginCode').value.trim();
+    if (!name) { $('loginErr').textContent = '名字必填'; return; }
+    doLogin({ type: 'login', mode: 'user', name, code });
+  };
+  $('loginName').addEventListener('keydown', e => { if (e.key === 'Enter') $('nameLoginBtn').click(); });
+
+  function applyRole() {
+    window.MY_ROLE = myRole;
+    if (myRole === 'guest') {
+      $('inputBar').style.display = 'none';
+      $('gameBtn').style.display = 'none';
+      $('nick').disabled = true;
+      const b = document.createElement('div'); b.id = 'guestBanner';
+      b.style.cssText = 'background:#1a2030;color:#9aa3b2;font-size:12px;text-align:center;padding:6px 12px;border-bottom:1px solid #232733;';
+      b.textContent = '访客模式：仅可查看消息，无法发言或操作';
+      $('main').insertBefore(b, $('bar'));
+    } else if (myRole === 'admin') {
+      $('adminBtn').style.display = '';
+    }
+  }
+  function removeMsgDom(id) { document.querySelectorAll('#log [data-id="' + id + '"]').forEach(n => n.remove()); }
+
+  // ===================== 管理员控制台 =====================
+  $('adminBtn').onclick = () => { $('adminView').style.display = 'flex'; renderAdmin(); };
+  $('adminClose').onclick = () => { $('adminView').style.display = 'none'; };
+  function renderAdmin() {
+    const ul = $('adminList'); ul.innerHTML = '';
+    adminFeed.slice().reverse().forEach(x => {
+      const d = document.createElement('div'); d.className = 'admin-item'; d.dataset.id = x.id;
+      const meta = document.createElement('div'); meta.className = 'meta';
+      meta.innerHTML = '<span class="nm"></span> <span class="t"></span>';
+      meta.querySelector('.nm').textContent = x.name;
+      meta.querySelector('.t').textContent = (x.time || '') + (x.ip ? ' · ' + x.ip : '');
+      d.appendChild(meta);
+      const body = document.createElement('div'); body.className = 'body'; body.textContent = x.text || '(图片)';
+      d.appendChild(body);
+      const acts = document.createElement('div'); acts.className = 'acts';
+      const del = document.createElement('button'); del.className = 'del'; del.textContent = '删除';
+      del.onclick = () => ws.send(JSON.stringify({ type: 'admin_delete', id: x.id }));
+      const geo = document.createElement('button'); geo.textContent = '📍 查看地点';
+      geo.onclick = () => { geo.disabled = true; geo.textContent = '查询中…'; ws.send(JSON.stringify({ type: 'admin_geo_req', id: x.id })); };
+      const geoSpan = document.createElement('span'); geoSpan.className = 'geo';
+      acts.appendChild(del); acts.appendChild(geo); acts.appendChild(geoSpan);
+      d.appendChild(acts);
+      ul.appendChild(d);
+    });
+  }
 </script>
 </body>
 </html>

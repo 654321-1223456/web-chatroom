@@ -19,6 +19,8 @@ const last = (ws, t) => [...ws.msgs].reverse().find(m => m.type === t);
 
   const A = mk('Alice'), B = mk('Bob');
   await Promise.all([open(A), open(B)]);
+  send(A, { type: 'login', mode: 'user', name: 'Alice' });
+  send(B, { type: 'login', mode: 'user', name: 'Bob' });
   send(A, { type: 'join', name: 'Alice' });
   send(B, { type: 'join', name: 'Bob' });
   await wait(200);
@@ -71,6 +73,8 @@ const last = (ws, t) => [...ws.msgs].reverse().find(m => m.type === t);
   // 断线通知：开 C，匹配 D 后让 D 断线，C 应收到 opponent_left
   const C = mk('Carol'), D = mk('Dave');
   await Promise.all([open(C), open(D)]);
+  send(C, { type: 'login', mode: 'user', name: 'Carol' });
+  send(D, { type: 'login', mode: 'user', name: 'Dave' });
   send(C, { type: 'join', name: 'Carol' });
   send(D, { type: 'join', name: 'Dave' });
   send(C, { type: 'chess_new' });

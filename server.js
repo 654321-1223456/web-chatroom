@@ -1,34 +1,45 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const https = require('https');
 const { WebSocketServer } = require('ws');
 const { DatabaseSync } = require('node:sqlite');
 const ChessEngine = require('./public/chess-game.js');
 
 const PORT = process.env.PORT || 3000;
 const MAX_IMAGE = 1500000; // 图片 base64 字符上限
+const ADMIN_CODE = process.env.ADMIN_CODE || '123456'; // 管理员特殊数字口令（可环境变量覆盖）
 
 // ===================== SQLite 持久化 =====================
 const dbPath = process.env.DB_PATH || path.join(__dirname, 'chat.db');
 const db = new DatabaseSync(dbPath);
 db.exec(`CREATE TABLE IF NOT EXISTS messages(
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  channel TEXT, name TEXT, text TEXT, image TEXT, time TEXT, date TEXT
+  channel TEXT, name TEXT, text TEXT, image TEXT, time TEXT, date TEXT, ip TEXT
 )`);
+try { db.exec('ALTER TABLE messages ADD COLUMN ip TEXT'); } catch (e) {}
 // 启动加载：每频道最近 200 条到内存（用于实时广播与回放）
 const history = new Map();
 const chRows = db.prepare('SELECT DISTINCT channel FROM messages').all();
 for (const { channel } of chRows) {
-  const rows = db.prepare('SELECT name,text,image,time,date FROM messages WHERE channel=? ORDER BY id DESC LIMIT 200').all(channel);
+  const rows = db.prepare('SELECT id,name,text,image,time,date FROM messages WHERE channel=? ORDER BY id DESC LIMIT 200').all(channel);
   history.set(channel, rows.reverse().map(r => ({
-    name: r.name, text: r.text || '', image: r.image || undefined, time: r.time, date: r.date
+    id: r.id, name: r.name, text: r.text || '', image: r.image || undefined, time: r.time, date: r.date
   })));
 }
-const insertMsg = db.prepare('INSERT INTO messages(channel,name,text,image,time,date) VALUES(?,?,?,?,?,?)');
+const insertMsg = db.prepare('INSERT INTO messages(channel,name,text,image,time,date,ip) VALUES(?,?,?,?,?,?,?)');
+// 管理员信息流（最近 100 条，含发言 IP），用于后台删除/定位
+const feed = [];
+{
+  const rows = db.prepare("SELECT id,name,text,ip,time FROM messages WHERE channel='general' ORDER BY id DESC LIMIT 100").all();
+  for (const r of rows.reverse()) feed.push({ id: r.id, name: r.name, text: r.text || '', ip: r.ip || 'unknown', time: r.time });
+}
 
 // ===================== 状态 =====================
-const clients = new Map();                                   // ws -> { name, channel }
+const clients = new Map();                                   // ws -> { name, channel, role, ip }
 const channels = new Map([['general', { password: '', owner: null }]]); // name -> { password, owner }
+let adminWs = null; // 唯一在线的管理员
+function roleLabel(r) { return r === 'admin' ? '管理员' : r === 'guest' ? '访客' : '用户'; }
 
 // ===================== 联机国际象棋 =====================
 const chessGames = new Map();   // gameId -> { id, white, black, state, over }
@@ -55,6 +66,22 @@ function channelInfo(ws, ch) {
   send(ws, { type: 'channelInfo', channel: ch, locked: !!ci.password, owner: ci.owner, isOwner: !!(me && ci.owner === me.name) });
 }
 
+// ===================== 地理定位（管理员查看发言地，按需查询，带缓存与降级）=====================
+const geoCache = new Map();
+function geoLookup(ip) {
+  if (!ip || ip === 'unknown') return Promise.resolve('未知');
+  if (geoCache.has(ip)) return Promise.resolve(geoCache.get(ip));
+  if (!/^\d{1,3}(\.\d{1,3}){3}$/.test(ip)) return Promise.resolve(ip); // 非公网 IPv4 直接返回
+  return new Promise((res) => {
+    const req = https.get('http://ip-api.com/json/' + ip + '?fields=country,regionName,city', (r) => {
+      let body = ''; r.on('data', d => body += d);
+      r.on('end', () => { try { const j = JSON.parse(body); const g = [j.country, j.regionName, j.city].filter(Boolean).join(' ') || ip; geoCache.set(ip, g); res(g); } catch (e) { res(ip); } });
+    });
+    req.on('error', () => res(ip));
+    req.setTimeout(1500, () => { req.destroy(); res(ip); });
+  });
+}
+
 // ===================== HTTP 静态服务 =====================
 const server = http.createServer((req, res) => {
   const urlPath = req.url === '/' ? '/index.html' : req.url.split('?')[0];
@@ -70,21 +97,54 @@ const server = http.createServer((req, res) => {
 // ===================== WebSocket =====================
 const wss = new WebSocketServer({ server });
 
-wss.on('connection', (ws) => {
-  const name = '访客' + Math.floor(Math.random() * 1000);
-  clients.set(ws, { name, channel: 'general' });
-
-  send(ws, { type: 'welcome', name, channel: 'general' });
-  pushChannels();
-  pushUsers('general');
-  sendHistory(ws, 'general');
-  channelInfo(ws, 'general');
-  broadcastChannel('general', { type: 'sys', text: `${name} 加入了 #general` }, null);
+wss.on('connection', (ws, req) => {
+  const xff = (req.headers['x-forwarded-for'] || '').toString().split(',')[0].trim();
+  const ip = xff || (ws._socket && ws._socket.remoteAddress) || 'unknown';
+  clients.set(ws, { name: null, channel: null, role: null, ip });
+  // 暂不进入房间：等待客户端发送 login 后再正式加入
 
   ws.on('message', (data) => {
     let m; try { m = JSON.parse(data.toString()); } catch { return; }
     const c = clients.get(ws);
     if (!c) return;
+
+    // —— 登录（进入房间前必须 login）——
+    if (m.type === 'login') {
+      if (c.role) return; // 已登录
+      const mode = (m.mode || '').toString();
+      let role, name;
+      if (mode === 'guest') {
+        role = 'guest';
+        name = '访客' + Math.floor(Math.random() * 1000);
+      } else {
+        name = (m.name || '').toString().trim();
+        if (!name) { send(ws, { type: 'login_fail', reason: '名字必填' }); return; }
+        name = name.slice(0, 16);
+        const code = (m.code || '').toString().trim();
+        if (code && code === ADMIN_CODE) {
+          if (adminWs && adminWs !== ws && adminWs.readyState === ws.OPEN) {
+            send(ws, { type: 'login_fail', reason: '管理员已在线' }); return;
+          }
+          role = 'admin'; adminWs = ws;
+        } else {
+          role = 'user';
+        }
+      }
+      c.role = role; c.name = name; c.channel = 'general';
+      send(ws, { type: 'welcome', name, role, channel: 'general' });
+      pushUsers('general');
+      sendHistory(ws, 'general');
+      channelInfo(ws, 'general');
+      broadcastChannel('general', { type: 'sys', text: `${name}（${roleLabel(role)}）加入了 #general` }, null);
+      if (role === 'admin') send(ws, { type: 'admin_recent', messages: feed });
+      return;
+    }
+    if (!c.role) return; // 尚未登录，忽略其余指令
+
+    // 访客只读：禁止发言/私聊/改名/下棋
+    if (c.role === 'guest' && ['msg', 'whisper', 'join', 'chess_new', 'chess_join', 'chess_move', 'chess_resign'].includes(m.type)) {
+      send(ws, { type: 'sys', text: '访客无法操作（仅可查看）' }); return;
+    }
 
     if (m.type === 'join') {                 // 设置 / 修改昵称
       const old = c.name;
@@ -152,12 +212,16 @@ wss.on('connection', (ws) => {
       if (!text && !image) return;
       if (image && image.length > MAX_IMAGE) { send(ws, { type: 'sys', text: '图片过大，发送失败' }); return; }
       const t = time(), d = dateKey();
-      broadcastChannel(c.channel, { type: 'chat', name: c.name, text, image: image || undefined, channel: c.channel, time: t, date: d }, null);
+      const info = insertMsg.run(c.channel, c.name, text, image || null, t, d, c.ip);
+      const mid = info.lastInsertRowid;
+      broadcastChannel(c.channel, { type: 'chat', id: mid, name: c.name, text, image: image || undefined, channel: c.channel, time: t, date: d }, null);
 
       if (!history.has(c.channel)) history.set(c.channel, []);
-      history.get(c.channel).push({ name: c.name, text, image: image || undefined, time: t, date: d });
+      history.get(c.channel).push({ id: mid, name: c.name, text, image: image || undefined, time: t, date: d });
       if (history.get(c.channel).length > 200) history.get(c.channel).shift();
-      insertMsg.run(c.channel, c.name, text, image || null, t, d); // 永久落库
+      feed.push({ id: mid, name: c.name, text, ip: c.ip, time: t });
+      if (feed.length > 100) feed.shift();
+      for (const [w, cc] of clients) if (cc.role === 'admin') send(w, { type: 'admin_msg', id: mid, name: c.name, text, ip: c.ip, time: t });
 
       // @提醒：匹配当前在线昵称
       const mentions = [...text.matchAll(/@([^\s@]+)/g)].map(x => x[1]);
@@ -205,12 +269,23 @@ wss.on('connection', (ws) => {
       const payload = { type: 'chess_end', winner, reason: 'resign', white: clients.get(g.white).name, black: clients.get(g.black).name };
       send(g.white, payload); send(g.black, payload);
       chessGames.delete(g.id);
+    } else if (m.type === 'admin_delete') {  // 管理员删除违规发言
+      if (c.role !== 'admin') return;
+      const id = m.id; if (!id) return;
+      db.prepare('DELETE FROM messages WHERE id=?').run(id);
+      const i = feed.findIndex(x => x.id === id); if (i >= 0) feed.splice(i, 1);
+      broadcastChannel('general', { type: 'delete_msg', id }, null);
+    } else if (m.type === 'admin_geo_req') {  // 管理员查看发言人地点
+      if (c.role !== 'admin') return;
+      const id = m.id; const fm = feed.find(x => x.id === id); if (!fm) return;
+      geoLookup(fm.ip).then(geo => send(ws, { type: 'admin_geo', id, geo }));
     }
   });
 
   ws.on('close', () => {
     const c = clients.get(ws);
     if (!c) return;
+    if (c.role === 'admin' && adminWs === ws) adminWs = null; // 管理员下线，释放唯一席位
     const gi = chessWaiting.indexOf(ws); if (gi >= 0) chessWaiting.splice(gi, 1);
     const g = chessFind(ws);
     if (g && !g.over) {

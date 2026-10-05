@@ -169,6 +169,7 @@
 
   function onClick(r, c) {
     if (mode === 'online') {
+      if (window.MY_ROLE === 'guest') { setStatus('访客无法操作'); return; }
       if (!online.active || game.turn !== online.color) return; // 等对手 / 非我方回合
       var po = game.board[r][c];
       if (selected && legalTargets.some(function (t) { return t[0] === r && t[1] === c; })) {
@@ -295,7 +296,7 @@
     document.getElementById('undoBtn').onclick = undo;
     modeBtn.onclick = toggleMode;
     var mb = document.getElementById('matchBtn');
-    if (mb) mb.onclick = function () { var sock = (typeof ws !== 'undefined') ? ws : null; if (sock && sock.readyState === 1) sock.send(JSON.stringify({ type: 'chess_new' })); setStatus('已发送匹配请求，等待对手…'); };
+    if (mb) mb.onclick = function () { if (window.MY_ROLE === 'guest') { setStatus('访客无法操作'); return; } var sock = (typeof ws !== 'undefined') ? ws : null; if (sock && sock.readyState === 1) sock.send(JSON.stringify({ type: 'chess_new' })); setStatus('已发送匹配请求，等待对手…'); };
     var rb = document.getElementById('resignBtn');
     if (rb) rb.onclick = function () { if (!online.active) return; var sock = (typeof ws !== 'undefined') ? ws : null; if (sock && sock.readyState === 1) sock.send(JSON.stringify({ type: 'chess_resign' })); };
     window.ChessGame = { handle: handle };
