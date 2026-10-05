@@ -8,7 +8,8 @@ const PORT = process.env.PORT || 3000;
 const MAX_IMAGE = 1500000; // 图片 base64 字符上限
 
 // ===================== SQLite 持久化 =====================
-const db = new DatabaseSync(path.join(__dirname, 'chat.db'));
+const dbPath = process.env.DB_PATH || path.join(__dirname, 'chat.db');
+const db = new DatabaseSync(dbPath);
 db.exec(`CREATE TABLE IF NOT EXISTS messages(
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   channel TEXT, name TEXT, text TEXT, image TEXT, time TEXT, date TEXT

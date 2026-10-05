@@ -4,3 +4,10 @@ services:
     runtime: docker
     plan: free
     healthCheckPath: /
+    envs:
+      - key: DB_PATH
+        value: /app/data/chat.db
+    disks:
+      - name: data
+        mountPath: /app/data
+        sizeGB: 1

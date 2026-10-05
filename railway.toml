@@ -2,3 +2,10 @@
 startCommand = "node --experimental-sqlite server.js"
 healthcheckPath = "/"
 healthcheckTimeout = 100
+
+[variables]
+DB_PATH = "/app/data/chat.db"
+
+[[volumes]]
+mountPath = "/app/data"
+name = "chatdata"
