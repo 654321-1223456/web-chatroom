@@ -48,6 +48,23 @@
   #emojiPanel span:hover { background: #2b3450; }
   .hint { font-size: 11px; color: #4b5563; padding: 0 12px 6px; }
   #fileInput { display: none; }
+  /* 游戏板块：国际象棋 */
+  #gameBtn { background: #1f2430; color: #8ab4ff; border: 0; border-radius: 6px; padding: 0 12px; cursor: pointer; font-size: 16px; }
+  #gameView { display: none; flex-direction: column; align-items: center; justify-content: flex-start; gap: 12px; padding: 16px; flex: 1; overflow: auto; }
+  #chessStatus { color: #cdd6e4; font-size: 15px; font-weight: 600; }
+  #chessBoard { display: grid; grid-template-columns: repeat(8, 1fr); width: min(92vw, 460px); aspect-ratio: 1; border: 2px solid #2b3240; border-radius: 6px; overflow: hidden; }
+  .cell { position: relative; display: flex; align-items: center; justify-content: center; cursor: pointer; user-select: none; }
+  .cell.light { background: #eef0f3; }
+  .cell.dark { background: #7c8aa0; }
+  .cell .piece { font-size: min(11vw, 40px); line-height: 1; }
+  .cell .piece.w { color: #fff; text-shadow: 0 0 1px #000, 0 0 2px #000; }
+  .cell .piece.b { color: #222; }
+  .cell.selected { box-shadow: inset 0 0 0 3px #ffd54a; }
+  .cell.move::after { content: ''; position: absolute; width: 28%; height: 28%; border-radius: 50%; background: rgba(40,160,80,.6); }
+  .cell.move.capture::after { width: 78%; height: 78%; background: transparent; border: 4px solid rgba(200,40,40,.7); border-radius: 50%; }
+  #gameCtrls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  #gameCtrls button { background: #1f2430; color: #cdd6e4; border: 1px solid #2b3240; border-radius: 6px; padding: 9px 14px; cursor: pointer; font-size: 14px; }
+  #gameCtrls button:hover { background: #2b3450; }
   /* 移动端适配 */
   #menuBtn { display: none; background: #1f2430; color: #8ab4ff; border: 0; border-radius: 6px; padding: 0 12px; cursor: pointer; font-size: 16px; }
   #sideClose { display: none; position: absolute; top: 10px; right: 10px; background: transparent; border: 0; color: #9aa3b2; font-size: 18px; cursor: pointer; z-index: 1; }
@@ -81,11 +98,12 @@
     <div id="tempNotice" style="background:#2a1f10;color:#ffb454;font-size:12px;text-align:center;padding:6px 12px;border-bottom:1px solid #232733;">⚠ 临时房间：聊天记录不永久保存，刷新或服务器重启可能清空</div>
     <div id="bar">
       <button id="menuBtn" title="在线列表">☰</button>
+      <button id="gameBtn" title="小游戏">🎮</button>
       <span class="ch">公开房间</span>
       <span class="me">我是 <input id="nick" maxlength="16"></span>
     </div>
     <div id="log"></div>
-    <div class="hint">/@昵称 提醒 · /w 昵称 消息 私聊 · 点用户名发起私聊</div>
+    <div class="hint" id="hint">/@昵称 提醒 · /w 昵称 消息 私聊 · 点用户名发起私聊</div>
     <div id="inputBar">
       <button class="iconbtn" id="emojiBtn" title="表情">😀</button>
       <button class="iconbtn" id="imgBtn" title="图片">📎</button>
@@ -94,8 +112,19 @@
       <div id="emojiPanel"></div>
       <input type="file" id="fileInput" accept="image/*">
     </div>
+    <div id="gameView">
+      <div id="chessStatus">白方 走棋</div>
+      <div id="chessBoard"></div>
+      <div id="gameCtrls">
+        <button id="newGameBtn">新对局</button>
+        <button id="undoBtn">悔棋</button>
+        <button id="modeBtn">模式：双人对战</button>
+      </div>
+      <div class="hint">点棋子选中，再点高亮格落子 · 升变自动为后</div>
+    </div>
   </div>
 
+<script src="chess-game.js"></script>
 <script>
   const wsProto = location.protocol === 'https:' ? 'wss' : 'ws';
   const ws = new WebSocket(`${wsProto}://${location.host}`);
