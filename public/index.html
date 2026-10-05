@@ -97,7 +97,8 @@
   </div>
 
 <script>
-  const ws = new WebSocket(`ws://${location.host}`);
+  const wsProto = location.protocol === 'https:' ? 'wss' : 'ws';
+  const ws = new WebSocket(`${wsProto}://${location.host}`);
   let myName = '', curChannel = 'general', curIsOwner = false, lastDate = null;
   const $ = (id) => document.getElementById(id);
   const log = $('log');
