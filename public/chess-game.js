@@ -144,8 +144,10 @@
   var history = [];
   var selected = null;
   var legalTargets = [];
-  var mode = 'pvp';      // 'pvp' 双人对战 | 'pve' 人机
+  var mode = 'pvp';      // 'pvp' 双人对战 | 'pve' 人机 | 'online' 联机
   var aiColor = 'b';
+  var online = { color: null, active: false };
+  var lastStatus = null;
 
   var boardEl, statusEl, modeBtn;
 
@@ -166,6 +168,20 @@
   }
 
   function onClick(r, c) {
+    if (mode === 'online') {
+      if (!online.active || game.turn !== online.color) return; // 等对手 / 非我方回合
+      var po = game.board[r][c];
+      if (selected && legalTargets.some(function (t) { return t[0] === r && t[1] === c; })) {
+        var from = selected, to = [r, c];
+        selected = null; legalTargets = []; render();
+        var sock = (typeof ws !== 'undefined') ? ws : null;
+        if (sock && sock.readyState === 1) sock.send(JSON.stringify({ type: 'chess_move', from: from, to: to }));
+        return;
+      }
+      if (po && po.color === game.turn) { selected = [r, c]; legalTargets = Engine.legalMoves(game, r, c); render(); }
+      else { selected = null; legalTargets = []; render(); }
+      return;
+    }
     if (mode === 'pve' && game.turn === aiColor) return; // 等 AI
     var p = game.board[r][c];
     if (selected && legalTargets.some(function (t) { return t[0] === r && t[1] === c; })) { doMove(selected, [r, c]); return; }
@@ -201,6 +217,11 @@
   }
 
   function updateStatus() {
+    if (mode === 'online') {
+      if (!online.active) return;
+      updateStatusFromServer(lastStatus);
+      return;
+    }
     var st = Engine.status(game);
     var txt = (game.turn === 'w' ? '白方' : '黑方') + ' 走棋';
     if (st.over) {
@@ -214,10 +235,55 @@
   function newGame() { game = Engine.newGame(); history = []; selected = null; legalTargets = []; render(); }
   function undo() { if (history.length) { game = history.pop(); selected = null; legalTargets = []; render(); } }
   function toggleMode() {
-    mode = (mode === 'pvp') ? 'pve' : 'pvp';
-    modeBtn.textContent = (mode === 'pvp') ? '模式：双人对战' : '模式：人机(你执白)';
-    if (mode === 'pve' && game.turn === aiColor) setTimeout(aiMove, 350);
-    render();
+    mode = (mode === 'pvp') ? 'pve' : (mode === 'pve' ? 'online' : 'pvp');
+    modeBtn.textContent = (mode === 'pvp') ? '模式：双人对战' : (mode === 'pve' ? '模式：人机(你执白)' : '模式：联机对战');
+    var oc = document.getElementById('onlineCtrls');
+    var lc = document.getElementById('gameCtrls');
+    if (mode === 'online') {
+      if (oc) oc.style.display = 'flex';
+      if (lc) lc.style.display = 'none';
+      online.color = null; online.active = false;
+      selected = null; legalTargets = []; lastStatus = null;
+      render();
+      setStatus('点击「匹配对手」开始联机对局');
+    } else {
+      if (oc) oc.style.display = 'none';
+      if (lc) lc.style.display = 'flex';
+      if (mode === 'pve' && game.turn === aiColor) setTimeout(aiMove, 350);
+      render();
+    }
+  }
+  function setStatus(t) { if (statusEl) statusEl.textContent = t; }
+  function updateStatusFromServer(st) {
+    lastStatus = st;
+    var txt = (game.turn === online.color ? '轮到你（' : '对手思考中（') + (game.turn === 'w' ? '白' : '黑') + '）';
+    if (st && st.over) {
+      if (st.type === 'checkmate') txt = '将死！' + (st.winner === 'white' ? '白方' : '黑方') + '胜 🏆';
+      else if (st.type === 'stalemate') txt = '和棋（困毙）🤝';
+    } else if (st && st.check) txt += ' 将军！';
+    setStatus(txt);
+  }
+  function handle(m) {
+    if (!m || !m.type) return;
+    if (m.type === 'chess_wait') { setStatus(m.text || '等待对手…'); }
+    else if (m.type === 'chess_start') {
+      online.color = m.color; online.active = true;
+      game = { board: m.board, turn: m.turn, castling: m.castling, ep: m.ep };
+      selected = null; legalTargets = []; lastStatus = null;
+      setStatus('已匹配！对手：' + m.opponent + '，你执' + (m.color === 'w' ? '白' : '黑'));
+      render();
+    } else if (m.type === 'chess_state') {
+      game = { board: m.board, turn: m.turn, castling: m.castling, ep: m.ep };
+      selected = null; legalTargets = [];
+      render();
+      updateStatusFromServer(m.status);
+    } else if (m.type === 'chess_err') { setStatus('⚠ ' + (m.text || '错误')); }
+    else if (m.type === 'chess_end') {
+      online.active = false;
+      var txt = m.reason === 'resign' ? ((m.winner === online.color ? '你' : '对手') + '认输') : (m.reason === 'opponent_left' ? '对手离开了棋局' : '棋局结束');
+      if (m.winner) txt += '，' + (m.winner === 'w' ? '白方' : '黑方') + '胜 🏆';
+      setStatus('🏁 ' + txt);
+    }
   }
 
   function init() {
@@ -228,6 +294,11 @@
     document.getElementById('newGameBtn').onclick = newGame;
     document.getElementById('undoBtn').onclick = undo;
     modeBtn.onclick = toggleMode;
+    var mb = document.getElementById('matchBtn');
+    if (mb) mb.onclick = function () { var sock = (typeof ws !== 'undefined') ? ws : null; if (sock && sock.readyState === 1) sock.send(JSON.stringify({ type: 'chess_new' })); setStatus('已发送匹配请求，等待对手…'); };
+    var rb = document.getElementById('resignBtn');
+    if (rb) rb.onclick = function () { if (!online.active) return; var sock = (typeof ws !== 'undefined') ? ws : null; if (sock && sock.readyState === 1) sock.send(JSON.stringify({ type: 'chess_resign' })); };
+    window.ChessGame = { handle: handle };
     var gb = document.getElementById('gameBtn');
     if (gb) gb.onclick = function () {
       var gv = document.getElementById('gameView');

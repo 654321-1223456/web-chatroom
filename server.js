@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { WebSocketServer } = require('ws');
 const { DatabaseSync } = require('node:sqlite');
+const ChessEngine = require('./public/chess-game.js');
 
 const PORT = process.env.PORT || 3000;
 const MAX_IMAGE = 1500000; // 图片 base64 字符上限
@@ -28,6 +29,11 @@ const insertMsg = db.prepare('INSERT INTO messages(channel,name,text,image,time,
 // ===================== 状态 =====================
 const clients = new Map();                                   // ws -> { name, channel }
 const channels = new Map([['general', { password: '', owner: null }]]); // name -> { password, owner }
+
+// ===================== 联机国际象棋 =====================
+const chessGames = new Map();   // gameId -> { id, white, black, state, over }
+const chessWaiting = [];        // 等待匹配的 ws 队列
+function chessFind(ws) { for (const g of chessGames.values()) if (g.white === ws || g.black === ws) return g; return null; }
 
 const time = () => new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
 const dateKey = (d = new Date()) => d.toISOString().slice(0, 10);
@@ -162,11 +168,57 @@ wss.on('connection', (ws) => {
         }
       }
     }
+    else if (m.type === 'chess_new' || m.type === 'chess_join') {
+      if (chessFind(ws)) return;                       // 已在棋局中则忽略
+      let opp = null;
+      for (let i = chessWaiting.length - 1; i >= 0; i--) { if (chessWaiting[i] !== ws) { opp = chessWaiting.splice(i, 1)[0]; break; } }
+      if (opp) {
+        const white = opp, black = ws, st = ChessEngine.newGame();
+        const id = 'g' + Date.now() + Math.floor(Math.random() * 1000);
+        chessGames.set(id, { id, white, black, state: st, over: false });
+        const p = (color, oppName) => ({ type: 'chess_start', color, opponent: oppName, board: st.board, turn: st.turn, castling: st.castling, ep: st.ep });
+        send(white, p('w', clients.get(black).name));
+        send(black, p('b', clients.get(white).name));
+      } else {
+        if (!chessWaiting.includes(ws)) chessWaiting.push(ws);
+        send(ws, { type: 'chess_wait', text: '已加入匹配，等待对手…' });
+      }
+    } else if (m.type === 'chess_move') {
+      const g = chessFind(ws); if (!g || g.over) return;
+      const color = g.white === ws ? 'w' : 'b';
+      if (g.state.turn !== color) { send(ws, { type: 'chess_err', text: '还没轮到你' }); return; }
+      const from = m.from, to = m.to;
+      if (!Array.isArray(from) || !Array.isArray(to) || from.length !== 2 || to.length !== 2) return;
+      if (!g.state.board[from[0]] || !g.state.board[from[0]][from[1]]) return;
+      const legal = ChessEngine.legalMoves(g.state, from[0], from[1]);
+      if (!legal.some(x => x[0] === to[0] && x[1] === to[1])) { send(ws, { type: 'chess_err', text: '非法走子' }); return; }
+      const pp = (g.state.board[from[0]][from[1]].type === 'p' && (to[0] === 0 || to[0] === 7)) ? (m.promotion || 'q') : null;
+      g.state = ChessEngine.makeMove(g.state, from, to, pp);
+      const st = ChessEngine.status(g.state);
+      if (st.over) g.over = true;
+      const payload = { type: 'chess_state', board: g.state.board, turn: g.state.turn, castling: g.state.castling, ep: g.state.ep, status: st, white: clients.get(g.white).name, black: clients.get(g.black).name };
+      send(g.white, payload); send(g.black, payload);
+    } else if (m.type === 'chess_resign') {
+      const g = chessFind(ws); if (!g || g.over) return;
+      const winner = g.white === ws ? 'b' : 'w';
+      g.over = true;
+      const payload = { type: 'chess_end', winner, reason: 'resign', white: clients.get(g.white).name, black: clients.get(g.black).name };
+      send(g.white, payload); send(g.black, payload);
+      chessGames.delete(g.id);
+    }
   });
 
   ws.on('close', () => {
     const c = clients.get(ws);
     if (!c) return;
+    const gi = chessWaiting.indexOf(ws); if (gi >= 0) chessWaiting.splice(gi, 1);
+    const g = chessFind(ws);
+    if (g && !g.over) {
+      const opp = g.white === ws ? g.black : g.white;
+      g.over = true;
+      send(opp, { type: 'chess_end', winner: g.white === ws ? 'b' : 'w', reason: 'opponent_left' });
+      chessGames.delete(g.id);
+    }
     broadcastChannel(c.channel, { type: 'sys', text: `${c.name} 离开了 #${c.channel}` }, null);
     clients.delete(ws);
     pushUsers(c.channel);
