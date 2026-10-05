@@ -48,26 +48,44 @@
   #emojiPanel span:hover { background: #2b3450; }
   .hint { font-size: 11px; color: #4b5563; padding: 0 12px 6px; }
   #fileInput { display: none; }
+  /* 移动端适配 */
+  #menuBtn { display: none; background: #1f2430; color: #8ab4ff; border: 0; border-radius: 6px; padding: 0 12px; cursor: pointer; font-size: 16px; }
+  #sideClose { display: none; position: absolute; top: 10px; right: 10px; background: transparent; border: 0; color: #9aa3b2; font-size: 18px; cursor: pointer; z-index: 1; }
+  #overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 20; }
+  @media (max-width: 640px) {
+    #side { position: fixed; top: 0; bottom: 0; left: 0; width: 220px; transform: translateX(-100%); transition: transform .2s; z-index: 30; box-shadow: 2px 0 12px rgba(0,0,0,.5); }
+    #side.open { transform: none; }
+    #sideClose { display: block; }
+    #main { width: 100%; }
+    #bar { gap: 8px; padding: 10px 12px; }
+    #menuBtn { display: block; }
+    #bar .me { font-size: 12px; }
+    #bar input { width: 92px; }
+    #inputBar { padding: 8px; gap: 6px; }
+    #inputBar input.txt { padding: 12px; font-size: 16px; }
+    #log { padding: 12px; }
+    .msg .text { font-size: 15px; }
+    #overlay.show { display: block; }
+  }
 </style>
 </head>
 <body>
   <div id="side">
+    <button id="sideClose" title="关闭">✕</button>
     <h3>💬 聊天室</h3>
-    <div class="sec-title">频道</div>
-    <ul id="channels"></ul>
-    <div id="addChannel"><input id="newCh" placeholder="频道名 或 名:密码" maxlength="24"><button id="addBtn">+</button></div>
-    <div class="sec-title">在线 (#<span id="curCh">general</span>)</div>
+    <div class="sec-title">在线</div>
     <ul id="users"></ul>
   </div>
+  <div id="overlay"></div>
   <div id="main">
     <div id="tempNotice" style="background:#2a1f10;color:#ffb454;font-size:12px;text-align:center;padding:6px 12px;border-bottom:1px solid #232733;">⚠ 临时房间：聊天记录不永久保存，刷新或服务器重启可能清空</div>
     <div id="bar">
-      <span class="ch">#<span id="chName">general</span></span>
-      <span class="locktag" id="lockTag"></span>
+      <button id="menuBtn" title="在线列表">☰</button>
+      <span class="ch">公开房间</span>
       <span class="me">我是 <input id="nick" maxlength="16"></span>
     </div>
     <div id="log"></div>
-    <div class="hint">/@昵称 提醒 · /w 昵称 消息 私聊 · 点用户名私聊 · 公开频道建加密频道用「名:密码」</div>
+    <div class="hint">/@昵称 提醒 · /w 昵称 消息 私聊 · 点用户名发起私聊</div>
     <div id="inputBar">
       <button class="iconbtn" id="emojiBtn" title="表情">😀</button>
       <button class="iconbtn" id="imgBtn" title="图片">📎</button>
@@ -129,46 +147,22 @@
   ws.onopen = () => { $('nick').focus(); };
   ws.onmessage = (e) => {
     const m = JSON.parse(e.data);
-    if (m.type === 'welcome') { myName = m.name; curChannel = m.channel; $('nick').value = myName; $('chName').textContent = curChannel; }
-    else if (m.type === 'channels') { renderChannels(m.list); }
-    else if (m.type === 'users') { if (m.channel === curChannel) renderUsers(m.list); }
-    else if (m.type === 'channelInfo') { curIsOwner = !!m.isOwner; $('lockTag').textContent = m.locked ? '🔒' : ''; renderUsers(channelUsersCache); }
-    else if (m.type === 'switched') { curChannel = m.channel; $('chName').textContent = curChannel; $('curCh').textContent = curChannel; log.innerHTML = ''; lastDate = null; addSys(`— 已进入 #${curChannel} —`); }
+    if (m.type === 'welcome') { myName = m.name; curChannel = m.channel; $('nick').value = myName; }
+    else if (m.type === 'users') { renderUsers(m.list); }
     else if (m.type === 'history') { log.innerHTML = ''; lastDate = null; addSys('— 以下为历史消息 —'); (m.messages || []).forEach(x => addMsg(x.name, x.text, x.time, x.date, x.image)); }
     else if (m.type === 'chat') { addMsg(m.name, m.text, m.time, m.date, m.image); }
-    else if (m.type === 'mention') { addSys(`💬 ${m.from} 在 #${m.channel} @了你：${m.text}`); document.title = '💬 有人@你'; setTimeout(() => document.title = '聊天室', 3000); }
+    else if (m.type === 'mention') { addSys(`💬 ${m.from} @了你：${m.text}`); document.title = '💬 有人@你'; setTimeout(() => document.title = '聊天室', 3000); }
     else if (m.type === 'whisper') { addWhisper(m.from, m.to, m.text, m.time, m.dir); }
-    else if (m.type === 'denied') { const pw = prompt(`#${m.channel} 需要密码：`); if (pw !== null) ws.send(JSON.stringify({ type: 'switch', channel: m.channel, password: pw })); }
-    else if (m.type === 'kicked') { addSys(`⚠️ 你已被房主移出 #${m.channel}`); }
     else if (m.type === 'sys') { addSys(m.text); }
   };
 
-  let channelUsersCache = [];
-  function renderChannels(list) {
-    const ul = $('channels'); ul.innerHTML = '';
-    list.forEach(ch => {
-      const li = document.createElement('li');
-      const name = document.createElement('span'); name.textContent = '#' + ch.name;
-      li.appendChild(name);
-      if (ch.locked) { const l = document.createElement('span'); l.className = 'lock'; l.textContent = '🔒'; li.appendChild(l); }
-      if (ch.name === curChannel) li.className = 'active';
-      li.onclick = () => { if (ch.name !== curChannel) ws.send(JSON.stringify({ type: 'switch', channel: ch.name })); };
-      ul.appendChild(li);
-    });
-  }
   function renderUsers(list) {
-    channelUsersCache = list || [];
     const ul = $('users'); ul.innerHTML = '';
     (list || []).forEach(n => {
       const li = document.createElement('li');
       const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = '● ' + n;
       nm.onclick = () => { $('text').value = '/w ' + n + ' '; $('text').focus(); };
       li.appendChild(nm);
-      if (curIsOwner && n !== myName) {
-        const k = document.createElement('span'); k.className = 'kick'; k.textContent = '踢';
-        k.onclick = () => { if (confirm(`将 ${n} 移出 #${curChannel}？`)) ws.send(JSON.stringify({ type: 'kick', target: n })); };
-        li.appendChild(k);
-      }
       ul.appendChild(li);
     });
   }
@@ -185,13 +179,6 @@
   $('send').onclick = sendMsg;
   $('text').addEventListener('keydown', e => { if (e.key === 'Enter') sendMsg(); });
   $('nick').addEventListener('change', () => { const n = $('nick').value.trim(); if (n && n !== myName) { ws.send(JSON.stringify({ type: 'join', name: n })); myName = n; } });
-  $('addBtn').onclick = () => {
-    const v = $('newCh').value.trim(); if (!v) return;
-    const [name, pw] = v.split(/:(.*)/s); // 名:密码
-    ws.send(JSON.stringify({ type: 'switch', channel: name.trim(), password: (pw || '').trim() }));
-    $('newCh').value = '';
-  };
-  $('newCh').addEventListener('keydown', e => { if (e.key === 'Enter') $('addBtn').click(); });
 
   // 表情面板
   const ep = $('emojiPanel');
@@ -208,6 +195,11 @@
     r.readAsDataURL(f);
     $('fileInput').value = '';
   };
+
+  // 移动端抽屉：在线列表
+  $('menuBtn').onclick = () => { $('side').classList.add('open'); $('overlay').classList.add('show'); };
+  $('sideClose').onclick = () => { $('side').classList.remove('open'); $('overlay').classList.remove('show'); };
+  $('overlay').onclick = () => { $('side').classList.remove('open'); $('overlay').classList.remove('show'); };
 </script>
 </body>
 </html>
