@@ -5,6 +5,7 @@ healthcheckTimeout = 100
 
 [variables]
 DB_PATH = "/app/data/chat.db"
+ADMIN_CODE = "202201"
 
 [[volumes]]
 mountPath = "/app/data"

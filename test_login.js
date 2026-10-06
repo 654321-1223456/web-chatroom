@@ -52,7 +52,7 @@ const waitType = (ws, t, ms = 2500) => new Promise((res) => {
   // 管理员登录
   const A = mk('Admin');
   await open(A);
-  send(A, { type: 'login', mode: 'user', name: '管理员', code: '123456' });
+  send(A, { type: 'login', mode: 'user', name: '管理员', code: '202201' });
   await wait(150);
   ok('管理员收到 welcome(role=admin)', last(A, 'welcome') && last(A, 'welcome').role === 'admin');
   ok('管理员收到 admin_recent 数组', Array.isArray(last(A, 'admin_recent') && last(A, 'admin_recent').messages));
@@ -71,7 +71,7 @@ const waitType = (ws, t, ms = 2500) => new Promise((res) => {
   // 管理员唯一席位：第二个管理员被拒
   const A2 = mk('Admin2');
   await open(A2);
-  send(A2, { type: 'login', mode: 'user', name: '冒牌管理员', code: '123456' });
+  send(A2, { type: 'login', mode: 'user', name: '冒牌管理员', code: '202201' });
   await wait(200);
   ok('第二管理员被拒(login_fail 管理员已在线)', last(A2, 'login_fail') && last(A2, 'login_fail').reason === '管理员已在线');
 
@@ -82,6 +82,13 @@ const waitType = (ws, t, ms = 2500) => new Promise((res) => {
   await wait(150);
   ok('错误口令仅普通用户', last(A3, 'welcome') && last(A3, 'welcome').role === 'user');
 
+  // 旧口令 123456 已失效（降级为普通用户）
+  const A5 = mk('Admin5');
+  await open(A5);
+  send(A5, { type: 'login', mode: 'user', name: '旧口令用户', code: '123456' });
+  await wait(150);
+  ok('旧口令123456已失效(仅为普通用户)', last(A5, 'welcome') && last(A5, 'welcome').role === 'user');
+
   // 空名字被拒
   const A4 = mk('Admin4');
   await open(A4);
@@ -89,7 +96,7 @@ const waitType = (ws, t, ms = 2500) => new Promise((res) => {
   await wait(150);
   ok('空名字被拒(名字必填)', last(A4, 'login_fail') && last(A4, 'login_fail').reason === '名字必填');
 
-  G.close(); U.close(); A.close(); A2.close(); A3.close(); A4.close();
+  G.close(); U.close(); A.close(); A2.close(); A3.close(); A4.close(); A5.close();
   console.log(`\n结果: ${pass} 通过, ${fail} 失败`);
   process.exit(fail ? 1 : 0);
 })().catch(e => { console.error('ERR', e); process.exit(1); });

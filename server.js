@@ -8,7 +8,7 @@ const ChessEngine = require('./public/chess-game.js');
 
 const PORT = process.env.PORT || 3000;
 const MAX_IMAGE = 1500000; // 图片 base64 字符上限
-const ADMIN_CODE = process.env.ADMIN_CODE || '123456'; // 管理员特殊数字口令（可环境变量覆盖）
+const ADMIN_CODE = process.env.ADMIN_CODE || '202201'; // 管理员特殊数字口令（可环境变量覆盖）
 
 // ===================== SQLite 持久化 =====================
 const dbPath = process.env.DB_PATH || path.join(__dirname, 'chat.db');
