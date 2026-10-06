@@ -41,6 +41,21 @@ const channels = new Map([['general', { password: '', owner: null }]]); // name 
 let adminWs = null; // 唯一在线的管理员
 function roleLabel(r) { return r === 'admin' ? '管理员' : r === 'guest' ? '访客' : '用户'; }
 
+// 聊天室主题色（全员生效，重启后回落默认）
+let roomColor = process.env.ROOM_COLOR || '#8ab4ff';
+// 在线数据统计：定时采样人数，供管理员看板使用
+const onlineHistory = [];          // [{ t, count }]
+const seenUsers = new Set();       // 累计不同用户（按昵称）
+const STATS_SAMPLE_MS = 5000;
+const STATS_MAX = 144;             // 约 12 分钟
+function buildStats() {
+  const online = clients.size;
+  const users = [...clients.values()].map(c => ({ name: c.name, role: c.role }));
+  const peak = onlineHistory.reduce((m, x) => Math.max(m, x.count), online);
+  return { type: 'admin_stats', online, users, peak, distinct: seenUsers.size, history: onlineHistory.slice() };
+}
+function broadcastStats() { const s = buildStats(); for (const [w, c] of clients) if (c.role === 'admin') send(w, s); }
+
 // ===================== 联机国际象棋 =====================
 const chessGames = new Map();   // gameId -> { id, white, black, state, over }
 const chessWaiting = [];        // 等待匹配的 ws 队列
@@ -131,12 +146,14 @@ wss.on('connection', (ws, req) => {
         }
       }
       c.role = role; c.name = name; c.channel = 'general';
-      send(ws, { type: 'welcome', name, role, channel: 'general' });
+      seenUsers.add(name);
+      send(ws, { type: 'welcome', name, role, channel: 'general', color: roomColor });
       pushUsers('general');
       sendHistory(ws, 'general');
       channelInfo(ws, 'general');
       broadcastChannel('general', { type: 'sys', text: `${name}（${roleLabel(role)}）加入了 #general` }, null);
       if (role === 'admin') send(ws, { type: 'admin_recent', messages: feed });
+      broadcastStats();
       return;
     }
     if (!c.role) return; // 尚未登录，忽略其余指令
@@ -279,6 +296,12 @@ wss.on('connection', (ws, req) => {
       if (c.role !== 'admin') return;
       const id = m.id; const fm = feed.find(x => x.id === id); if (!fm) return;
       geoLookup(fm.ip).then(geo => send(ws, { type: 'admin_geo', id, geo }));
+    } else if (m.type === 'set_color') {      // 管理员修改聊天室主题色（全员生效）
+      if (c.role !== 'admin') return;
+      const col = (m.color || '').toString().trim();
+      if (!/^#[0-9a-fA-F]{6}$/.test(col)) return;
+      roomColor = col;
+      for (const w of clients.keys()) send(w, { type: 'room_color', color: col });
     }
   });
 
@@ -297,7 +320,16 @@ wss.on('connection', (ws, req) => {
     broadcastChannel(c.channel, { type: 'sys', text: `${c.name} 离开了 #${c.channel}` }, null);
     clients.delete(ws);
     pushUsers(c.channel);
+    broadcastStats();
   });
 });
 
 server.listen(PORT, () => console.log(`聊天室服务器已启动: http://localhost:${PORT}`));
+
+// 在线人数定时采样（每 5 秒），并推送给在线管理员
+setInterval(() => {
+  const count = clients.size;
+  onlineHistory.push({ t: Date.now(), count });
+  if (onlineHistory.length > STATS_MAX) onlineHistory.shift();
+  broadcastStats();
+}, STATS_SAMPLE_MS);

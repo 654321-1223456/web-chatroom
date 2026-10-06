@@ -6,25 +6,27 @@
 <title>聊天室</title>
 <style>
   * { box-sizing: border-box; }
+  :root { --accent: #8ab4ff; }
+  #cgBar stop:first-child, #cgSide stop:first-child { stop-color: var(--accent); }
   html, body { height: 100%; margin: 0; font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; }
   body { display: flex; background: #0f1117; color: #e6e6e6; }
   #side { width: 210px; background: #161922; border-right: 1px solid #232733; display: flex; flex-direction: column; }
-  #side h3 { margin: 0; padding: 14px; font-size: 15px; border-bottom: 1px solid #232733; color: #8ab4ff; }
+  #side h3 { margin: 0; padding: 14px; font-size: 15px; border-bottom: 1px solid #232733; color: var(--accent); }
   .sec-title { padding: 10px 14px 4px; font-size: 12px; color: #6b7280; }
   #channels, #users { list-style: none; margin: 0; padding: 0 8px; overflow-y: auto; }
   #channels li { padding: 7px 10px; border-radius: 6px; cursor: pointer; font-size: 14px; display: flex; justify-content: space-between; align-items: center; }
   #channels li:hover { background: #1f2430; }
-  #channels li.active { background: #2b3450; color: #8ab4ff; }
+  #channels li.active { background: #2b3450; color: var(--accent); }
   .lock { font-size: 11px; color: #ffb454; }
   #users li { padding: 4px 10px; font-size: 13px; color: #9aa3b2; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
   #users li .nm { cursor: pointer; }
-  #users li .nm:hover { color: #8ab4ff; }
+  #users li .nm:hover { color: var(--accent); }
   .kick { font-size: 11px; color: #ff6b6b; cursor: pointer; padding: 0 4px; }
   #addChannel { display: flex; padding: 8px; gap: 6px; }
   #addChannel input { flex: 1; background: #0f1117; border: 1px solid #2a2f3a; color: #e6e6e6; border-radius: 6px; padding: 6px; }
   #main { flex: 1; display: flex; flex-direction: column; }
   #bar { padding: 12px 16px; border-bottom: 1px solid #232733; display: flex; align-items: center; gap: 10px; }
-  #bar .ch { font-weight: 600; color: #8ab4ff; }
+  #bar .ch { font-weight: 600; color: var(--accent); }
   #bar .locktag { font-size: 11px; color: #ffb454; }
   #bar .me { margin-left: auto; font-size: 13px; color: #9aa3b2; }
   #bar input { background: #0f1117; border: 1px solid #2a2f3a; color: #e6e6e6; border-radius: 6px; padding: 5px 8px; width: 120px; }
@@ -32,7 +34,7 @@
   .brand { display: inline-flex; align-items: center; flex: 0 0 auto; }
   .brand svg { display: block; filter: drop-shadow(0 1px 2px rgba(0,0,0,.35)); }
   #log { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
-  .msg .name { font-weight: 600; color: #8ab4ff; }
+  .msg .name { font-weight: 600; color: var(--accent); }
   .msg .time { font-size: 11px; color: #6b7280; margin-left: 6px; }
   .msg .text { margin-top: 2px; line-height: 1.5; word-break: break-word; }
   .msg img { max-width: 240px; max-height: 240px; border-radius: 8px; margin-top: 4px; display: block; }
@@ -55,13 +57,13 @@
   #loginView, #adminView { position: fixed; inset: 0; background: #0f1117; display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
   #adminView { background: rgba(8,10,16,.96); flex-direction: column; align-items: stretch; }
   .login-card { width: min(420px, 92vw); background: #161922; border: 1px solid #232733; border-radius: 14px; padding: 22px; box-shadow: 0 10px 40px rgba(0,0,0,.5); }
-  .login-card h2 { margin: 0 0 4px; font-size: 20px; color: #8ab4ff; }
+  .login-card h2 { margin: 0 0 4px; font-size: 20px; color: var(--accent); }
   .login-card p.sub { margin: 0 0 16px; font-size: 13px; color: #9aa3b2; }
   .login-opt { border: 1px solid #2a2f3a; border-radius: 10px; padding: 14px; margin-bottom: 12px; }
   .login-opt .t { font-size: 15px; font-weight: 600; color: #e6e6e6; }
   .login-opt .d { font-size: 12px; color: #9aa3b2; margin: 4px 0 10px; }
   .login-opt input { width: 100%; box-sizing: border-box; background: #0f1117; border: 1px solid #2a2f3a; color: #e6e6e6; border-radius: 8px; padding: 10px 12px; font-size: 14px; margin-bottom: 8px; }
-  .login-opt input:focus { outline: none; border-color: #8ab4ff; }
+  .login-opt input:focus { outline: none; border-color: var(--accent); }
   .btn-primary { width: 100%; background: #2b3450; color: #fff; border: 0; border-radius: 8px; padding: 11px; font-size: 15px; cursor: pointer; }
   .btn-primary:hover { background: #34406a; }
   .btn-ghost { width: 100%; background: #1f2430; color: #cdd6e4; border: 1px solid #2b3240; border-radius: 8px; padding: 11px; font-size: 15px; cursor: pointer; }
@@ -73,15 +75,35 @@
   #adminList { flex: 1; overflow-y: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; }
   .admin-item { background: #161922; border: 1px solid #232733; border-radius: 10px; padding: 10px 12px; }
   .admin-item .meta { font-size: 13px; color: #9aa3b2; }
-  .admin-item .meta .nm { color: #8ab4ff; font-weight: 600; }
+  .admin-item .meta .nm { color: var(--accent); font-weight: 600; }
   .admin-item .body { margin: 4px 0; font-size: 14px; color: #e6e6e6; word-break: break-word; }
   .admin-item .acts { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .admin-item .acts button { background: #1f2430; color: #cdd6e4; border: 1px solid #2b3240; border-radius: 6px; padding: 5px 10px; cursor: pointer; font-size: 13px; }
   .admin-item .acts .del { color: #ff6b6b; border-color: #4a2630; }
   .admin-item .geo { font-size: 12px; color: #6b7280; }
+  /* 在线数据 / 主题色（管理员） */
+  #statsBtn { background: #1f2430; color: var(--accent); border: 0; border-radius: 6px; padding: 0 12px; cursor: pointer; font-size: 16px; }
+  #statsView { position: fixed; inset: 0; background: rgba(8,10,16,.96); display: none; flex-direction: column; align-items: stretch; z-index: 50; padding: 16px; box-sizing: border-box; }
+  #statsView .shead { display: flex; align-items: center; padding: 6px 4px 14px; }
+  #statsView .shead h2 { margin: 0; font-size: 18px; color: var(--accent); }
+  #statsView .shead .close { margin-left: auto; background: #1f2430; color: #cdd6e4; border: 0; border-radius: 8px; padding: 8px 14px; cursor: pointer; }
+  #statsBody { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; max-width: 560px; width: 100%; margin: 0 auto; }
+  .card-box { background: #161922; border: 1px solid #232733; border-radius: 12px; padding: 16px; }
+  .big-count { font-size: 40px; font-weight: 700; color: var(--accent); line-height: 1; margin-top: 4px; }
+  .stat-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 10px; }
+  .stat-row .it { background: #0f1117; border: 1px solid #232733; border-radius: 8px; padding: 8px 12px; font-size: 13px; color: #9aa3b2; }
+  .stat-row .it b { color: #e6e6e6; font-size: 16px; margin-left: 6px; }
+  #userList { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  #userList .u { background: #0f1117; border: 1px solid #232733; border-radius: 999px; padding: 5px 12px; font-size: 13px; }
+  #userList .u .r { font-size: 11px; margin-left: 4px; color: #9aa3b2; }
+  #chart { width: 100%; height: 150px; }
+  .empty { color: #6b7280; font-size: 13px; }
+  .color-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+  .color-row input[type=color] { width: 44px; height: 32px; border: 1px solid #2a2f3a; background: #0f1117; border-radius: 6px; cursor: pointer; padding: 2px; }
+  .swatch { width: 26px; height: 26px; border-radius: 6px; border: 1px solid #2a2f3a; cursor: pointer; }
 
   /* 游戏板块：国际象棋 */
-  #gameBtn { background: #1f2430; color: #8ab4ff; border: 0; border-radius: 6px; padding: 0 12px; cursor: pointer; font-size: 16px; }
+  #gameBtn { background: #1f2430; color: var(--accent); border: 0; border-radius: 6px; padding: 0 12px; cursor: pointer; font-size: 16px; }
   #gameView { display: none; flex-direction: column; align-items: center; justify-content: flex-start; gap: 12px; padding: 16px; flex: 1; overflow: auto; }
   #chessStatus { color: #cdd6e4; font-size: 15px; font-weight: 600; }
   #chessBoard { display: grid; grid-template-columns: repeat(8, 1fr); width: min(92vw, 460px); aspect-ratio: 1; border: 2px solid #2b3240; border-radius: 6px; overflow: hidden; }
@@ -98,7 +120,7 @@
   #gameCtrls button, #onlineCtrls button { background: #1f2430; color: #cdd6e4; border: 1px solid #2b3240; border-radius: 6px; padding: 9px 14px; cursor: pointer; font-size: 14px; }
   #gameCtrls button:hover, #onlineCtrls button:hover { background: #2b3450; }
   /* 移动端适配 */
-  #menuBtn { display: none; background: #1f2430; color: #8ab4ff; border: 0; border-radius: 6px; padding: 0 12px; cursor: pointer; font-size: 16px; }
+  #menuBtn { display: none; background: #1f2430; color: var(--accent); border: 0; border-radius: 6px; padding: 0 12px; cursor: pointer; font-size: 16px; }
   #sideClose { display: none; position: absolute; top: 10px; right: 10px; background: transparent; border: 0; color: #9aa3b2; font-size: 18px; cursor: pointer; z-index: 1; }
   #overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 20; }
   @media (max-width: 640px) {
@@ -145,6 +167,41 @@
     <div class="ahead"><h2>🛡 管理员控制台</h2><button class="close" id="adminClose">关闭</button></div>
     <div id="adminList"></div>
   </div>
+  <!-- 在线数据 / 主题色（管理员） -->
+  <div id="statsView" style="display:none;">
+    <div class="shead"><h2>📊 在线数据</h2><button class="close" id="statsClose">关闭</button></div>
+    <div id="statsBody">
+      <div class="card-box">
+        <div style="font-size:13px;color:#9aa3b2;">当前在线人数</div>
+        <div class="big-count" id="onlineCount">0</div>
+        <div class="stat-row">
+          <div class="it">峰值<b id="peakCount">0</b></div>
+          <div class="it">累计不同用户<b id="distinctCount">0</b></div>
+          <div class="it">采样点<b id="sampleCount">0</b></div>
+        </div>
+      </div>
+      <div class="card-box">
+        <div style="font-size:13px;color:#9aa3b2;margin-bottom:4px;">在线用户</div>
+        <div id="userList"></div>
+      </div>
+      <div class="card-box">
+        <div style="font-size:13px;color:#9aa3b2;margin-bottom:6px;">人数变化（每 5 秒采样）</div>
+        <div id="chart"></div>
+      </div>
+      <div class="card-box">
+        <div style="font-size:13px;color:#9aa3b2;margin-bottom:4px;">聊天室主题色（全员生效）</div>
+        <div class="color-row">
+          <input type="color" id="colorPick" value="#8ab4ff">
+          <span class="swatch" data-c="#8ab4ff" style="background:#8ab4ff"></span>
+          <span class="swatch" data-c="#10b981" style="background:#10b981"></span>
+          <span class="swatch" data-c="#f59e0b" style="background:#f59e0b"></span>
+          <span class="swatch" data-c="#ef4444" style="background:#ef4444"></span>
+          <span class="swatch" data-c="#a855f7" style="background:#a855f7"></span>
+          <span class="swatch" data-c="#ec4899" style="background:#ec4899"></span>
+        </div>
+      </div>
+    </div>
+  </div>
   <div id="side">
     <button id="sideClose" title="关闭">✕</button>
     <h3><span class="brand" style="margin-right:8px;"><svg width="20" height="20" viewBox="0 0 32 32" aria-hidden="true"><defs><linearGradient id="cgSide" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#10b981"/></linearGradient></defs><rect x="2" y="2" width="28" height="28" rx="9" fill="url(#cgSide)"/><rect x="8.5" y="8.5" width="15" height="11" rx="3.5" fill="#fff"/><path d="M12.5 19.5 L12.5 24 L17.5 19.5 Z" fill="#fff"/><circle cx="13.5" cy="14" r="1.35" fill="#10b981"/><circle cx="16.5" cy="14" r="1.35" fill="#10b981"/><circle cx="19.5" cy="14" r="1.35" fill="#10b981"/></svg></span>聊天室</h3>
@@ -169,6 +226,7 @@
       <button id="menuBtn" title="在线列表">☰</button>
       <button id="gameBtn" title="小游戏">🎮</button>
       <button id="adminBtn" style="display:none;" title="管理">🛡</button>
+      <button id="statsBtn" style="display:none;" title="在线数据">📊</button>
       <span class="ch">公开房间</span>
       <span class="me">我是 <input id="nick" maxlength="16"></span>
     </div>
@@ -203,7 +261,7 @@
   const wsProto = location.protocol === 'https:' ? 'wss' : 'ws';
   const ws = new WebSocket(`${wsProto}://${location.host}`);
   let myName = '', curChannel = 'general', curIsOwner = false, lastDate = null;
-  let myRole = '', wsReady = false, pendingLogin = null, adminFeed = [];
+  let myRole = '', wsReady = false, pendingLogin = null, adminFeed = [], lastStats = null;
   const $ = (id) => document.getElementById(id);
   const log = $('log');
   const EMOJIS = '😀😁😂🤣😊😍😘😎🤔😴😭😡👍👎👏🙏💪❤️🔥⭐🌹🎉🍺☕🚀💡⚡🌈😇🤝💯🐱🐶🌟💥🎈'.match(/./gu);
@@ -269,6 +327,8 @@
     else if (m.type === 'admin_recent') { adminFeed = m.messages || []; if ($('adminView').style.display !== 'none') renderAdmin(); }
     else if (m.type === 'admin_msg') { adminFeed.push(m); if (adminFeed.length > 100) adminFeed.shift(); if ($('adminView').style.display !== 'none') renderAdmin(); }
     else if (m.type === 'admin_geo') { const el = document.querySelector('#adminList [data-id="' + m.id + '"] .geo'); if (el) el.textContent = '📍 ' + m.geo; }
+    else if (m.type === 'room_color') { document.documentElement.style.setProperty('--accent', m.color); }
+    else if (m.type === 'admin_stats') { lastStats = m; if ($('statsView').style.display !== 'none') renderStats(m); }
     else if (m.type === 'chess_wait' || m.type === 'chess_start' || m.type === 'chess_state' || m.type === 'chess_err' || m.type === 'chess_end') { if (window.ChessGame) window.ChessGame.handle(m); }
   };
 
@@ -343,6 +403,7 @@
       $('main').insertBefore(b, $('bar'));
     } else if (myRole === 'admin') {
       $('adminBtn').style.display = '';
+      $('statsBtn').style.display = '';
     }
   }
   function removeMsgDom(id) { document.querySelectorAll('#log [data-id="' + id + '"]').forEach(n => n.remove()); }
@@ -350,6 +411,16 @@
   // ===================== 管理员控制台 =====================
   $('adminBtn').onclick = () => { $('adminView').style.display = 'flex'; renderAdmin(); };
   $('adminClose').onclick = () => { $('adminView').style.display = 'none'; };
+  // ===================== 在线数据 / 主题色 =====================
+  $('statsBtn').onclick = () => {
+    $('statsView').style.display = 'flex';
+    const cur = (getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()) || '#8ab4ff';
+    $('colorPick').value = cur;
+    if (lastStats) renderStats(lastStats); else $('chart').innerHTML = '<div class="empty">数据采集中…（每 5 秒采样）</div>';
+  };
+  $('statsClose').onclick = () => { $('statsView').style.display = 'none'; };
+  $('colorPick').oninput = () => { ws.send(JSON.stringify({ type: 'set_color', color: $('colorPick').value })); };
+  document.querySelectorAll('.swatch').forEach(s => s.onclick = () => { const c = s.dataset.c; $('colorPick').value = c; ws.send(JSON.stringify({ type: 'set_color', color: c })); });
   function renderAdmin() {
     const ul = $('adminList'); ul.innerHTML = '';
     adminFeed.slice().reverse().forEach(x => {
@@ -371,6 +442,44 @@
       d.appendChild(acts);
       ul.appendChild(d);
     });
+  }
+  function renderStats(s) {
+    $('onlineCount').textContent = s.online;
+    $('peakCount').textContent = s.peak;
+    $('distinctCount').textContent = s.distinct;
+    $('sampleCount').textContent = (s.history || []).length;
+    const ul = $('userList'); ul.innerHTML = '';
+    (s.users || []).forEach(u => {
+      const el = document.createElement('span'); el.className = 'u';
+      el.textContent = u.name;
+      const tag = u.role === 'admin' ? '👑' : u.role === 'guest' ? '访客' : '';
+      if (tag) { const r = document.createElement('span'); r.className = 'r'; r.textContent = tag; el.appendChild(r); }
+      ul.appendChild(el);
+    });
+    renderChart(s.history || []);
+  }
+  function renderChart(hist) {
+    const W = 320, H = 150, pad = 22, box = $('chart');
+    if (!hist || hist.length < 2) { box.innerHTML = '<div class="empty">数据采集中…（每 5 秒采样）</div>'; return; }
+    const counts = hist.map(h => h.count);
+    const maxC = Math.max.apply(null, counts.concat(1));
+    const minC = Math.min.apply(null, counts.concat(0));
+    const n = hist.length;
+    const x = i => pad + (W - 2 * pad) * (i / (n - 1));
+    const y = v => (H - pad) - (H - 2 * pad) * ((v - minC) / (maxC - minC || 1));
+    const accent = (getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()) || '#8ab4ff';
+    const pts = hist.map((h, i) => x(i).toFixed(1) + ',' + y(h.count).toFixed(1)).join(' ');
+    const area = x(0).toFixed(1) + ',' + (H - pad) + ' ' + pts + ' ' + x(n - 1).toFixed(1) + ',' + (H - pad);
+    let dots = ''; const step = Math.max(1, Math.ceil(n / 8));
+    hist.forEach((h, i) => { if (i % step === 0) dots += '<circle cx="' + x(i).toFixed(1) + '" cy="' + y(h.count).toFixed(1) + '" r="2.2" fill="' + accent + '"/>'; });
+    box.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" height="100%" preserveAspectRatio="none">'
+      + '<line x1="' + pad + '" y1="' + (H - pad) + '" x2="' + (W - pad) + '" y2="' + (H - pad) + '" stroke="#232733" stroke-width="1"/>'
+      + '<polygon points="' + area + '" fill="' + accent + '22"/>'
+      + '<polyline points="' + pts + '" fill="none" stroke="' + accent + '" stroke-width="2" stroke-linejoin="round"/>'
+      + dots
+      + '<text x="' + (W - pad) + '" y="14" fill="#9aa3b2" font-size="11" text-anchor="end">峰值 ' + maxC + '</text>'
+      + '<text x="' + pad + '" y="14" fill="#9aa3b2" font-size="11">当前 ' + counts[n - 1] + '</text>'
+      + '</svg>';
   }
 </script>
 </body>
