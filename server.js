@@ -42,7 +42,9 @@ let adminWs = null; // 唯一在线的管理员
 function roleLabel(r) { return r === 'admin' ? '管理员' : r === 'guest' ? '访客' : '用户'; }
 
 // 聊天室主题色（全员生效，重启后回落默认）
-let roomColor = process.env.ROOM_COLOR || '#8ab4ff';
+let roomColor = process.env.ROOM_COLOR || '#1296db';
+// 群公告（管理员设置，内存态，重启清空，无持久化）
+let roomNotice = '';
 // 在线数据统计：定时采样人数，供管理员看板使用
 const onlineHistory = [];          // [{ t, count }]
 const seenUsers = new Set();       // 累计不同用户（按昵称）
@@ -74,6 +76,7 @@ function pushChannels() {
   for (const w of clients.keys()) send(w, { type: 'channels', list });
 }
 function pushUsers(ch) { const list = channelUsers(ch); for (const [w, c] of clients) if (c.channel === ch) send(w, { type: 'users', channel: ch, list }); }
+function deleteMsg(id) { try { db.prepare('DELETE FROM messages WHERE id=?').run(id); } catch (e) {} const i = feed.findIndex(x => x.id === id); if (i >= 0) feed.splice(i, 1); }
 function sendHistory(ws, ch) { send(ws, { type: 'history', channel: ch, messages: (history.get(ch) || []).slice(-20) }); }
 function channelInfo(ws, ch) {
   const ci = channels.get(ch) || { password: '', owner: null };
@@ -147,7 +150,7 @@ wss.on('connection', (ws, req) => {
       }
       c.role = role; c.name = name; c.channel = 'general';
       seenUsers.add(name);
-      send(ws, { type: 'welcome', name, role, channel: 'general', color: roomColor });
+      send(ws, { type: 'welcome', name, role, channel: 'general', color: roomColor, notice: roomNotice });
       pushUsers('general');
       sendHistory(ws, 'general');
       channelInfo(ws, 'general');
@@ -289,9 +292,24 @@ wss.on('connection', (ws, req) => {
     } else if (m.type === 'admin_delete') {  // 管理员删除违规发言
       if (c.role !== 'admin') return;
       const id = m.id; if (!id) return;
-      db.prepare('DELETE FROM messages WHERE id=?').run(id);
-      const i = feed.findIndex(x => x.id === id); if (i >= 0) feed.splice(i, 1);
+      deleteMsg(id);
       broadcastChannel('general', { type: 'delete_msg', id }, null);
+    } else if (m.type === 'recall') {         // 撤回自己的消息（管理员可撤回任意）
+      if (c.role === 'guest') return;
+      const id = m.id; if (!id) return;
+      const fm = feed.find(x => x.id === id); if (!fm) return;
+      if (c.role !== 'admin' && fm.name !== c.name) return;
+      deleteMsg(id);
+      broadcastChannel('general', { type: 'delete_msg', id }, null);
+      if (c.role === 'admin') send(ws, { type: 'admin_recent', messages: feed });
+    } else if (m.type === 'set_notice') {     // 管理员设置群公告（内存态，无持久化）
+      if (c.role !== 'admin') return;
+      roomNotice = (m.text || '').toString().slice(0, 200);
+      broadcastChannel('general', { type: 'notice', text: roomNotice }, null);
+    } else if (m.type === 'typing') {         // 正在输入（仅广播给同频道其他人）
+      broadcastChannel(c.channel, { type: 'typing', name: c.name }, ws);
+    } else if (m.type === 'typing_stop') {
+      broadcastChannel(c.channel, { type: 'typing_stop', name: c.name }, ws);
     } else if (m.type === 'admin_geo_req') {  // 管理员查看发言人地点
       if (c.role !== 'admin') return;
       const id = m.id; const fm = feed.find(x => x.id === id); if (!fm) return;

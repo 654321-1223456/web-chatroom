@@ -53,7 +53,7 @@ const waitForStats = (msgs, minOnline, ms) => new Promise(res => {
   await sleep(1500); // 等服务器启动
   const admin = await connectAndLogin('admin', '管理员A', ADMIN_CODE);
   const user = await connectAndLogin('user', '用户B');
-  ok('welcome 含 color（默认）', !!find(admin.msgs, 'welcome') && find(admin.msgs, 'welcome').color === '#8ab4ff');
+  ok('welcome 含 color（默认）', !!find(admin.msgs, 'welcome') && find(admin.msgs, 'welcome').color === '#1296db');
 
   // 管理员改主题色
   admin.ws.send(JSON.stringify({ type: 'set_color', color: '#ff3366' }));

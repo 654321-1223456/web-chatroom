@@ -6,107 +6,144 @@
 <title>聊天室</title>
 <style>
   * { box-sizing: border-box; }
-  :root { --accent: #8ab4ff; }
+  :root {
+    --accent: #1296db;
+    --bg: #ededed;
+    --panel: #ffffff;
+    --panel2: #f5f6f8;
+    --border: #e6e8eb;
+    --text: #1f2329;
+    --muted: #8a909c;
+  }
   #cgBar stop:first-child, #cgSide stop:first-child { stop-color: var(--accent); }
-  html, body { height: 100%; margin: 0; font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; }
-  body { display: flex; background: #0f1117; color: #e6e6e6; }
-  #side { width: 210px; background: #161922; border-right: 1px solid #232733; display: flex; flex-direction: column; }
-  #side h3 { margin: 0; padding: 14px; font-size: 15px; border-bottom: 1px solid #232733; color: var(--accent); }
-  .sec-title { padding: 10px 14px 4px; font-size: 12px; color: #6b7280; }
-  #channels, #users { list-style: none; margin: 0; padding: 0 8px; overflow-y: auto; }
-  #channels li { padding: 7px 10px; border-radius: 6px; cursor: pointer; font-size: 14px; display: flex; justify-content: space-between; align-items: center; }
-  #channels li:hover { background: #1f2430; }
-  #channels li.active { background: #2b3450; color: var(--accent); }
-  .lock { font-size: 11px; color: #ffb454; }
-  #users li { padding: 4px 10px; font-size: 13px; color: #9aa3b2; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
-  #users li .nm { cursor: pointer; }
-  #users li .nm:hover { color: var(--accent); }
-  .kick { font-size: 11px; color: #ff6b6b; cursor: pointer; padding: 0 4px; }
-  #addChannel { display: flex; padding: 8px; gap: 6px; }
-  #addChannel input { flex: 1; background: #0f1117; border: 1px solid #2a2f3a; color: #e6e6e6; border-radius: 6px; padding: 6px; }
-  #main { flex: 1; display: flex; flex-direction: column; }
-  #bar { padding: 12px 16px; border-bottom: 1px solid #232733; display: flex; align-items: center; gap: 10px; }
-  #bar .ch { font-weight: 600; color: var(--accent); }
-  #bar .locktag { font-size: 11px; color: #ffb454; }
-  #bar .me { margin-left: auto; font-size: 13px; color: #9aa3b2; }
-  #bar input { background: #0f1117; border: 1px solid #2a2f3a; color: #e6e6e6; border-radius: 6px; padding: 5px 8px; width: 120px; }
-  /* 聊天室图标（左上角品牌标识） */
+  html, body { height: 100%; margin: 0; font-family: -apple-system, "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif; }
+  body { display: flex; background: var(--bg); color: var(--text); font-size: 14px; }
+
+  /* ===================== 主聊天区 ===================== */
+  #main { flex: 1; display: flex; flex-direction: column; min-width: 0; background: var(--bg); order: 1; }
+  #tempNotice { background: #fff7e6; color: #b26a00; font-size: 12px; text-align: center; padding: 6px 12px; border-bottom: 1px solid var(--border); }
+  #roomNotice { background: #e8f4ff; color: #0a6cb0; font-size: 13px; text-align: center; padding: 7px 12px; border-bottom: 1px solid var(--border); display: none; }
+  #bar { padding: 10px 14px; background: var(--panel); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+  #bar .ch { font-weight: 600; font-size: 15px; color: var(--text); }
+  #bar .me { margin-left: auto; font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+  #bar input { background: var(--panel2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 5px 8px; width: 120px; }
+  #bar input:focus { outline: none; border-color: var(--accent); }
   .brand { display: inline-flex; align-items: center; flex: 0 0 auto; }
-  .brand svg { display: block; filter: drop-shadow(0 1px 2px rgba(0,0,0,.35)); }
-  #log { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
-  .msg .name { font-weight: 600; color: var(--accent); }
-  .msg .time { font-size: 11px; color: #6b7280; margin-left: 6px; }
-  .msg .text { margin-top: 2px; line-height: 1.5; word-break: break-word; }
-  .msg img { max-width: 240px; max-height: 240px; border-radius: 8px; margin-top: 4px; display: block; }
-  .mention { color: #ffb454; font-weight: 600; }
-  .whisper { background: #1c1430; border-left: 3px solid #b07cff; padding: 6px 10px; border-radius: 6px; font-size: 13px; }
-  .whisper .tag { color: #b07cff; font-weight: 600; }
-  .sys { font-size: 12px; color: #6b7280; text-align: center; }
-  .date-sep { font-size: 11px; color: #4b5563; text-align: center; margin: 6px 0 2px; }
-  #inputBar { display: flex; padding: 12px; border-top: 1px solid #232733; gap: 8px; position: relative; }
-  #inputBar input.txt { flex: 1; background: #0f1117; border: 1px solid #2a2f3a; color: #e6e6e6; border-radius: 8px; padding: 10px 12px; font-size: 14px; }
-  #inputBar button { background: #2b3450; color: #fff; border: 0; border-radius: 8px; padding: 0 14px; cursor: pointer; }
-  #inputBar button:hover { background: #34406a; }
-  .iconbtn { background: #1f2430 !important; padding: 0 12px !important; }
-  #emojiPanel { position: absolute; bottom: 56px; left: 12px; background: #161922; border: 1px solid #2a2f3a; border-radius: 8px; padding: 8px; display: none; grid-template-columns: repeat(8, 1fr); gap: 2px; width: 320px; max-height: 180px; overflow-y: auto; z-index: 10; }
+  .brand svg { display: block; filter: drop-shadow(0 1px 2px rgba(0,0,0,.15)); }
+
+  /* 右侧成员面板（桌面） */
+  #side { width: 230px; background: var(--panel); border-left: 1px solid var(--border); display: flex; flex-direction: column; order: 2; }
+  #side h3 { margin: 0; padding: 14px; font-size: 14px; border-bottom: 1px solid var(--border); color: var(--text); display: flex; align-items: center; justify-content: space-between; }
+  #side h3 .cnt { color: var(--muted); font-weight: 400; font-size: 13px; }
+  #users { list-style: none; margin: 0; padding: 8px; overflow-y: auto; flex: 1; }
+  #users li { padding: 7px 8px; border-radius: 8px; display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text); }
+  #users li:hover { background: var(--panel2); }
+  #users li .dot { width: 8px; height: 8px; border-radius: 50%; background: #34c759; flex: 0 0 auto; }
+  #users li .nm { cursor: pointer; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #users li .nm:hover { color: var(--accent); }
+  #users li .rl { font-size: 11px; color: var(--muted); }
+
+  /* 消息区（QQ 群聊气泡） */
+  #log { flex: 1; overflow-y: auto; padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; background: var(--bg); }
+  .msg { display: flex; gap: 10px; align-items: flex-start; }
+  .msg .avatar { width: 38px; height: 38px; border-radius: 8px; flex: 0 0 auto; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 600; font-size: 16px; user-select: none; }
+  .msg .msg-main { max-width: min(70%, 560px); display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .msg .meta-line { font-size: 12px; color: var(--muted); display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+  .msg .meta-line .name { font-weight: 600; color: #4b5563; }
+  .msg .bubble { background: var(--panel); border: 1px solid var(--border); border-radius: 4px 12px 12px 12px; padding: 9px 12px; line-height: 1.55; word-break: break-word; position: relative; }
+  .msg .bubble img { max-width: 220px; max-height: 260px; border-radius: 8px; display: block; cursor: pointer; }
+  .msg.own { flex-direction: row-reverse; }
+  .msg.own .msg-main { align-items: flex-end; }
+  .msg.own .meta-line { flex-direction: row-reverse; }
+  .msg.own .bubble { background: #d6ecff; border-color: #bfe0ff; border-radius: 12px 4px 12px 12px; }
+  .msg.own .meta-line .name { color: var(--accent); }
+  .msg .recall { font-size: 11px; color: var(--muted); cursor: pointer; margin-left: 4px; }
+  .msg .recall:hover { color: #ff6b6b; }
+  .mention { color: #ff8c00; font-weight: 600; }
+  .whisper { align-self: center; background: #f0e9ff; border: 1px solid #e0d4ff; padding: 6px 12px; border-radius: 10px; font-size: 13px; color: #5b3fa0; max-width: 80%; }
+  .whisper .tag { color: #7c5cff; font-weight: 600; }
+  .sys { align-self: center; font-size: 12px; color: var(--muted); background: rgba(0,0,0,.04); padding: 3px 10px; border-radius: 10px; }
+  .date-sep { align-self: center; font-size: 11px; color: var(--muted); background: rgba(0,0,0,.05); padding: 2px 10px; border-radius: 10px; }
+
+  /* 输入区 */
+  #typing { height: 18px; padding: 2px 16px 0; font-size: 12px; color: var(--muted); }
+  #inputBar { display: flex; padding: 10px 14px; background: var(--panel); border-top: 1px solid var(--border); gap: 8px; position: relative; align-items: center; }
+  #inputBar input.txt { flex: 1; background: var(--panel2); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 10px 12px; font-size: 14px; }
+  #inputBar input.txt:focus { outline: none; border-color: var(--accent); }
+  #inputBar button.send { background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 0 18px; cursor: pointer; font-size: 14px; }
+  #inputBar button.send:hover { filter: brightness(1.05); }
+  #inputBar button.send:disabled { opacity: .5; cursor: not-allowed; }
+  .iconbtn { background: transparent !important; color: var(--muted) !important; border: 0 !important; padding: 0 10px !important; font-size: 20px; cursor: pointer; }
+  .iconbtn:hover { color: var(--accent) !important; }
+  #emojiPanel { position: absolute; bottom: 60px; left: 14px; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 6px 24px rgba(0,0,0,.12); padding: 8px; display: none; grid-template-columns: repeat(8, 1fr); gap: 2px; width: 320px; max-height: 180px; overflow-y: auto; z-index: 10; }
   #emojiPanel span { cursor: pointer; font-size: 18px; text-align: center; padding: 4px; border-radius: 4px; }
-  #emojiPanel span:hover { background: #2b3450; }
-  .hint { font-size: 11px; color: #4b5563; padding: 0 12px 6px; }
+  #emojiPanel span:hover { background: var(--panel2); }
+  .hint { font-size: 12px; color: var(--muted); padding: 6px 14px 0; }
   #fileInput { display: none; }
-  /* 登录界面 / 管理员控制台 */
-  #loginView, #adminView { position: fixed; inset: 0; background: #0f1117; display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
-  #adminView { background: rgba(8,10,16,.96); flex-direction: column; align-items: stretch; }
-  .login-card { width: min(420px, 92vw); background: #161922; border: 1px solid #232733; border-radius: 14px; padding: 22px; box-shadow: 0 10px 40px rgba(0,0,0,.5); }
+  #overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 20; }
+
+  /* ===================== 功能栏按钮 ===================== */
+  #menuBtn, #gameBtn, #adminBtn, #statsBtn { background: var(--panel2); color: var(--accent); border: 1px solid var(--border); border-radius: 8px; padding: 0 12px; cursor: pointer; font-size: 16px; height: 34px; }
+  #menuBtn:hover, #gameBtn:hover, #adminBtn:hover, #statsBtn:hover { background: #e9f4fd; }
+  #menuBtn { display: none; }
+
+  /* 登录界面（亮色卡片） */
+  #loginView, #adminView, #statsView { position: fixed; inset: 0; background: rgba(20,24,30,.45); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
+  .login-card { width: min(420px, 92vw); background: var(--panel); border-radius: 14px; padding: 22px; box-shadow: 0 12px 48px rgba(0,0,0,.25); }
   .login-card h2 { margin: 0 0 4px; font-size: 20px; color: var(--accent); }
-  .login-card p.sub { margin: 0 0 16px; font-size: 13px; color: #9aa3b2; }
-  .login-opt { border: 1px solid #2a2f3a; border-radius: 10px; padding: 14px; margin-bottom: 12px; }
-  .login-opt .t { font-size: 15px; font-weight: 600; color: #e6e6e6; }
-  .login-opt .d { font-size: 12px; color: #9aa3b2; margin: 4px 0 10px; }
-  .login-opt input { width: 100%; box-sizing: border-box; background: #0f1117; border: 1px solid #2a2f3a; color: #e6e6e6; border-radius: 8px; padding: 10px 12px; font-size: 14px; margin-bottom: 8px; }
+  .login-card p.sub { margin: 0 0 16px; font-size: 13px; color: var(--muted); }
+  .login-opt { border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 12px; background: var(--panel2); }
+  .login-opt .t { font-size: 15px; font-weight: 600; color: var(--text); }
+  .login-opt .d { font-size: 12px; color: var(--muted); margin: 4px 0 10px; }
+  .login-opt input { width: 100%; box-sizing: border-box; background: #fff; border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 10px 12px; font-size: 14px; margin-bottom: 8px; }
   .login-opt input:focus { outline: none; border-color: var(--accent); }
-  .btn-primary { width: 100%; background: #2b3450; color: #fff; border: 0; border-radius: 8px; padding: 11px; font-size: 15px; cursor: pointer; }
-  .btn-primary:hover { background: #34406a; }
-  .btn-ghost { width: 100%; background: #1f2430; color: #cdd6e4; border: 1px solid #2b3240; border-radius: 8px; padding: 11px; font-size: 15px; cursor: pointer; }
-  .btn-ghost:hover { background: #2b3450; }
+  .btn-primary { width: 100%; background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 11px; font-size: 15px; cursor: pointer; }
+  .btn-primary:hover { filter: brightness(1.05); }
+  .btn-ghost { width: 100%; background: #fff; color: #444; border: 1px solid var(--border); border-radius: 8px; padding: 11px; font-size: 15px; cursor: pointer; }
+  .btn-ghost:hover { background: var(--panel2); }
   #loginErr { color: #ff6b6b; font-size: 13px; min-height: 18px; margin-top: 4px; text-align: center; }
-  #adminView .ahead { display: flex; align-items: center; padding: 14px 18px; border-bottom: 1px solid #232733; }
-  #adminView .ahead h2 { margin: 0; font-size: 18px; color: #ffb454; }
-  #adminView .ahead .close { margin-left: auto; background: #1f2430; color: #cdd6e4; border: 0; border-radius: 8px; padding: 8px 14px; cursor: pointer; }
-  #adminList { flex: 1; overflow-y: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; }
-  .admin-item { background: #161922; border: 1px solid #232733; border-radius: 10px; padding: 10px 12px; }
-  .admin-item .meta { font-size: 13px; color: #9aa3b2; }
+
+  /* 管理员控制台 */
+  #adminView { align-items: stretch; }
+  #adminView .ahead { display: flex; align-items: center; padding: 14px 18px; background: var(--panel); border-bottom: 1px solid var(--border); }
+  #adminView .ahead h2 { margin: 0; font-size: 18px; color: #ff8c00; }
+  #adminView .ahead #setNoticeBtn { background: var(--panel2); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 7px 12px; cursor: pointer; font-size: 13px; margin-left: auto; margin-right: 8px; }
+  #adminView .ahead .close { background: var(--panel2); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 7px 14px; cursor: pointer; }
+  #adminList { flex: 1; overflow-y: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; background: var(--bg); }
+  .admin-item { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+  .admin-item .meta { font-size: 13px; color: var(--muted); }
   .admin-item .meta .nm { color: var(--accent); font-weight: 600; }
-  .admin-item .body { margin: 4px 0; font-size: 14px; color: #e6e6e6; word-break: break-word; }
+  .admin-item .body { margin: 4px 0; font-size: 14px; color: var(--text); word-break: break-word; }
   .admin-item .acts { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-  .admin-item .acts button { background: #1f2430; color: #cdd6e4; border: 1px solid #2b3240; border-radius: 6px; padding: 5px 10px; cursor: pointer; font-size: 13px; }
-  .admin-item .acts .del { color: #ff6b6b; border-color: #4a2630; }
-  .admin-item .geo { font-size: 12px; color: #6b7280; }
+  .admin-item .acts button { background: var(--panel2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; cursor: pointer; font-size: 13px; }
+  .admin-item .acts .del { color: #ff6b6b; border-color: #f0c6c6; }
+  .admin-item .geo { font-size: 12px; color: var(--muted); }
+
   /* 在线数据 / 主题色（管理员） */
-  #statsBtn { background: #1f2430; color: var(--accent); border: 0; border-radius: 6px; padding: 0 12px; cursor: pointer; font-size: 16px; }
-  #statsView { position: fixed; inset: 0; background: rgba(8,10,16,.96); display: none; flex-direction: column; align-items: stretch; z-index: 50; padding: 16px; box-sizing: border-box; }
+  #statsView { flex-direction: column; align-items: stretch; padding: 16px; box-sizing: border-box; }
   #statsView .shead { display: flex; align-items: center; padding: 6px 4px 14px; }
   #statsView .shead h2 { margin: 0; font-size: 18px; color: var(--accent); }
-  #statsView .shead .close { margin-left: auto; background: #1f2430; color: #cdd6e4; border: 0; border-radius: 8px; padding: 8px 14px; cursor: pointer; }
+  #statsView .shead .close { margin-left: auto; background: var(--panel2); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 8px 14px; cursor: pointer; }
   #statsBody { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; max-width: 560px; width: 100%; margin: 0 auto; }
-  .card-box { background: #161922; border: 1px solid #232733; border-radius: 12px; padding: 16px; }
+  .card-box { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
   .big-count { font-size: 40px; font-weight: 700; color: var(--accent); line-height: 1; margin-top: 4px; }
   .stat-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 10px; }
-  .stat-row .it { background: #0f1117; border: 1px solid #232733; border-radius: 8px; padding: 8px 12px; font-size: 13px; color: #9aa3b2; }
-  .stat-row .it b { color: #e6e6e6; font-size: 16px; margin-left: 6px; }
+  .stat-row .it { background: var(--panel2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 13px; color: var(--muted); }
+  .stat-row .it b { color: var(--text); font-size: 16px; margin-left: 6px; }
   #userList { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
-  #userList .u { background: #0f1117; border: 1px solid #232733; border-radius: 999px; padding: 5px 12px; font-size: 13px; }
-  #userList .u .r { font-size: 11px; margin-left: 4px; color: #9aa3b2; }
+  #userList .u { background: var(--panel2); border: 1px solid var(--border); border-radius: 999px; padding: 5px 12px; font-size: 13px; }
+  #userList .u .r { font-size: 11px; margin-left: 4px; color: var(--muted); }
   #chart { width: 100%; height: 150px; }
-  .empty { color: #6b7280; font-size: 13px; }
+  .empty { color: var(--muted); font-size: 13px; }
   .color-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
-  .color-row input[type=color] { width: 44px; height: 32px; border: 1px solid #2a2f3a; background: #0f1117; border-radius: 6px; cursor: pointer; padding: 2px; }
-  .swatch { width: 26px; height: 26px; border-radius: 6px; border: 1px solid #2a2f3a; cursor: pointer; }
+  .color-row input[type=color] { width: 44px; height: 32px; border: 1px solid var(--border); background: #fff; border-radius: 6px; cursor: pointer; padding: 2px; }
+  .swatch { width: 26px; height: 26px; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; }
 
   /* 游戏板块：国际象棋 */
-  #gameBtn { background: #1f2430; color: var(--accent); border: 0; border-radius: 6px; padding: 0 12px; cursor: pointer; font-size: 16px; }
-  #gameView { display: none; flex-direction: column; align-items: center; justify-content: flex-start; gap: 12px; padding: 16px; flex: 1; overflow: auto; }
-  #chessStatus { color: #cdd6e4; font-size: 15px; font-weight: 600; }
-  #chessBoard { display: grid; grid-template-columns: repeat(8, 1fr); width: min(92vw, 460px); aspect-ratio: 1; border: 2px solid #2b3240; border-radius: 6px; overflow: hidden; }
+  #gameBtn { background: var(--panel2); }
+  #gameView { display: none; flex-direction: column; align-items: center; justify-content: flex-start; gap: 12px; padding: 16px; flex: 1; overflow: auto; background: var(--bg); }
+  #chessStatus { color: var(--text); font-size: 15px; font-weight: 600; }
+  #chessBoard { display: grid; grid-template-columns: repeat(8, 1fr); width: min(92vw, 460px); aspect-ratio: 1; border: 2px solid #c9ccd1; border-radius: 6px; overflow: hidden; }
   .cell { position: relative; display: flex; align-items: center; justify-content: center; cursor: pointer; user-select: none; }
   .cell.light { background: #eef0f3; }
   .cell.dark { background: #7c8aa0; }
@@ -117,14 +154,13 @@
   .cell.move::after { content: ''; position: absolute; width: 28%; height: 28%; border-radius: 50%; background: rgba(40,160,80,.6); }
   .cell.move.capture::after { width: 78%; height: 78%; background: transparent; border: 4px solid rgba(200,40,40,.7); border-radius: 50%; }
   #gameCtrls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
-  #gameCtrls button, #onlineCtrls button { background: #1f2430; color: #cdd6e4; border: 1px solid #2b3240; border-radius: 6px; padding: 9px 14px; cursor: pointer; font-size: 14px; }
-  #gameCtrls button:hover, #onlineCtrls button:hover { background: #2b3450; }
+  #gameCtrls button, #onlineCtrls button { background: var(--panel2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 9px 14px; cursor: pointer; font-size: 14px; }
+  #gameCtrls button:hover, #onlineCtrls button:hover { background: #e9f4fd; }
+
   /* 移动端适配 */
-  #menuBtn { display: none; background: #1f2430; color: var(--accent); border: 0; border-radius: 6px; padding: 0 12px; cursor: pointer; font-size: 16px; }
-  #sideClose { display: none; position: absolute; top: 10px; right: 10px; background: transparent; border: 0; color: #9aa3b2; font-size: 18px; cursor: pointer; z-index: 1; }
-  #overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 20; }
+  #sideClose { display: none; position: absolute; top: 10px; right: 10px; background: transparent; border: 0; color: var(--muted); font-size: 18px; cursor: pointer; z-index: 1; }
   @media (max-width: 640px) {
-    #side { position: fixed; top: 0; bottom: 0; left: 0; width: 220px; transform: translateX(-100%); transition: transform .2s; z-index: 30; box-shadow: 2px 0 12px rgba(0,0,0,.5); }
+    #side { position: fixed; top: 0; bottom: 0; right: 0; width: 220px; transform: translateX(100%); transition: transform .2s; z-index: 30; box-shadow: -2px 0 12px rgba(0,0,0,.2); border-left: 1px solid var(--border); }
     #side.open { transform: none; }
     #sideClose { display: block; }
     #main { width: 100%; }
@@ -135,7 +171,8 @@
     #inputBar { padding: 8px; gap: 6px; }
     #inputBar input.txt { padding: 12px; font-size: 16px; }
     #log { padding: 12px; }
-    .msg .text { font-size: 15px; }
+    .msg .msg-main { max-width: 82%; }
+    .msg .text, .msg .bubble { font-size: 15px; }
     #overlay.show { display: block; }
   }
 </style>
@@ -164,7 +201,7 @@
   </div>
   <!-- 管理员控制台 -->
   <div id="adminView" style="display:none;">
-    <div class="ahead"><h2>🛡 管理员控制台</h2><button class="close" id="adminClose">关闭</button></div>
+    <div class="ahead"><h2>🛡 管理员控制台</h2><button id="setNoticeBtn">群公告</button><button class="close" id="adminClose">关闭</button></div>
     <div id="adminList"></div>
   </div>
   <!-- 在线数据 / 主题色（管理员） -->
@@ -172,7 +209,7 @@
     <div class="shead"><h2>📊 在线数据</h2><button class="close" id="statsClose">关闭</button></div>
     <div id="statsBody">
       <div class="card-box">
-        <div style="font-size:13px;color:#9aa3b2;">当前在线人数</div>
+        <div style="font-size:13px;color:var(--muted);">当前在线人数</div>
         <div class="big-count" id="onlineCount">0</div>
         <div class="stat-row">
           <div class="it">峰值<b id="peakCount">0</b></div>
@@ -181,18 +218,18 @@
         </div>
       </div>
       <div class="card-box">
-        <div style="font-size:13px;color:#9aa3b2;margin-bottom:4px;">在线用户</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:4px;">在线用户</div>
         <div id="userList"></div>
       </div>
       <div class="card-box">
-        <div style="font-size:13px;color:#9aa3b2;margin-bottom:6px;">人数变化（每 5 秒采样）</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:6px;">人数变化（每 5 秒采样）</div>
         <div id="chart"></div>
       </div>
       <div class="card-box">
-        <div style="font-size:13px;color:#9aa3b2;margin-bottom:4px;">聊天室主题色（全员生效）</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:4px;">聊天室主题色（全员生效）</div>
         <div class="color-row">
-          <input type="color" id="colorPick" value="#8ab4ff">
-          <span class="swatch" data-c="#8ab4ff" style="background:#8ab4ff"></span>
+          <input type="color" id="colorPick" value="#1296db">
+          <span class="swatch" data-c="#1296db" style="background:#1296db"></span>
           <span class="swatch" data-c="#10b981" style="background:#10b981"></span>
           <span class="swatch" data-c="#f59e0b" style="background:#f59e0b"></span>
           <span class="swatch" data-c="#ef4444" style="background:#ef4444"></span>
@@ -202,15 +239,9 @@
       </div>
     </div>
   </div>
-  <div id="side">
-    <button id="sideClose" title="关闭">✕</button>
-    <h3><span class="brand" style="margin-right:8px;"><svg width="20" height="20" viewBox="0 0 32 32" aria-hidden="true"><defs><linearGradient id="cgSide" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#10b981"/></linearGradient></defs><rect x="2" y="2" width="28" height="28" rx="9" fill="url(#cgSide)"/><rect x="8.5" y="8.5" width="15" height="11" rx="3.5" fill="#fff"/><path d="M12.5 19.5 L12.5 24 L17.5 19.5 Z" fill="#fff"/><circle cx="13.5" cy="14" r="1.35" fill="#10b981"/><circle cx="16.5" cy="14" r="1.35" fill="#10b981"/><circle cx="19.5" cy="14" r="1.35" fill="#10b981"/></svg></span>聊天室</h3>
-    <div class="sec-title">在线</div>
-    <ul id="users"></ul>
-  </div>
-  <div id="overlay"></div>
+
   <div id="main">
-    <div id="tempNotice" style="background:#2a1f10;color:#ffb454;font-size:12px;text-align:center;padding:6px 12px;border-bottom:1px solid #232733;">⚠ 临时房间：聊天记录不永久保存，刷新或服务器重启可能清空</div>
+    <div id="tempNotice">⚠ 临时房间：聊天记录不永久保存，刷新或服务器重启可能清空</div>
     <div id="bar">
       <span class="brand" title="聊天室">
         <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true">
@@ -223,20 +254,21 @@
           <circle cx="19.5" cy="14" r="1.35" fill="#10b981"/>
         </svg>
       </span>
-      <button id="menuBtn" title="在线列表">☰</button>
+      <button id="menuBtn" title="在线成员">☰</button>
       <button id="gameBtn" title="小游戏">🎮</button>
       <button id="adminBtn" style="display:none;" title="管理">🛡</button>
       <button id="statsBtn" style="display:none;" title="在线数据">📊</button>
       <span class="ch">公开房间</span>
       <span class="me">我是 <input id="nick" maxlength="16"></span>
     </div>
+    <div id="roomNotice"></div>
     <div id="log"></div>
-    <div class="hint" id="hint">/@昵称 提醒 · /w 昵称 消息 私聊 · 点用户名发起私聊</div>
+    <div id="typing"></div>
     <div id="inputBar">
       <button class="iconbtn" id="emojiBtn" title="表情">😀</button>
       <button class="iconbtn" id="imgBtn" title="图片">📎</button>
       <input class="txt" id="text" placeholder="输入消息，回车发送…" autofocus>
-      <button id="send">发送</button>
+      <button class="send" id="send">发送</button>
       <div id="emojiPanel"></div>
       <input type="file" id="fileInput" accept="image/*">
     </div>
@@ -256,12 +288,21 @@
     </div>
   </div>
 
+  <div id="side">
+    <button id="sideClose" title="关闭">✕</button>
+    <h3>在线成员 <span class="cnt">0</span></h3>
+    <ul id="users"></ul>
+  </div>
+  <div id="overlay"></div>
+
 <script src="chess-game.js"></script>
 <script>
   const wsProto = location.protocol === 'https:' ? 'wss' : 'ws';
   const ws = new WebSocket(`${wsProto}://${location.host}`);
   let myName = '', curChannel = 'general', curIsOwner = false, lastDate = null;
   let myRole = '', wsReady = false, pendingLogin = null, adminFeed = [], lastStats = null;
+  let lastTyping = 0, typingSent = false, typingTimer = null;
+  const typingUsers = {};
   const $ = (id) => document.getElementById(id);
   const log = $('log');
   const EMOJIS = '😀😁😂🤣😊😍😘😎🤔😴😭😡👍👎👏🙏💪❤️🔥⭐🌹🎉🍺☕🚀💡⚡🌈😇🤝💯🐱🐶🌟💥🎈'.match(/./gu);
@@ -286,15 +327,37 @@
     }
     if (last < text.length) el.appendChild(document.createTextNode(text.slice(last)));
   }
+  function avatarColor(name) {
+    let h = 0; for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+    return 'hsl(' + (h % 360) + ',52%,55%)';
+  }
   function addMsg(name, text, time, date, image, id) {
     if (date && date !== lastDate) addDateSep(date);
-    const d = document.createElement('div'); d.className = 'msg';
+    const own = name === myName;
+    const d = document.createElement('div'); d.className = 'msg' + (own ? ' own' : '');
     if (id != null) d.dataset.id = id;
-    d.innerHTML = `<span class="name"></span><span class="time"></span><div class="text"></div>`;
-    d.querySelector('.name').textContent = name;
-    d.querySelector('.time').textContent = time || '';
-    if (image) { const img = document.createElement('img'); img.src = image; d.querySelector('.text').appendChild(img); }
-    if (text) setTextWithMentions(d.querySelector('.text'), text);
+    const av = document.createElement('div'); av.className = 'avatar';
+    av.style.background = own ? 'var(--accent)' : avatarColor(name);
+    av.textContent = (name[0] || '?');
+    const main = document.createElement('div'); main.className = 'msg-main';
+    const meta = document.createElement('div'); meta.className = 'meta-line';
+    const nm = document.createElement('span'); nm.className = 'name'; nm.textContent = name;
+    const tm = document.createElement('span'); tm.className = 'time'; tm.textContent = time || '';
+    meta.appendChild(nm); meta.appendChild(tm);
+    if (own && id != null && myRole !== 'guest') {
+      const rc = document.createElement('span'); rc.className = 'recall'; rc.textContent = '撤回';
+      rc.onclick = () => ws.send(JSON.stringify({ type: 'recall', id }));
+      meta.appendChild(rc);
+    }
+    const bub = document.createElement('div'); bub.className = 'bubble';
+    if (image) {
+      const img = document.createElement('img'); img.src = image;
+      img.onclick = () => window.open(image);
+      bub.appendChild(img);
+    }
+    if (text) setTextWithMentions(bub, text);
+    main.appendChild(meta); main.appendChild(bub);
+    d.appendChild(av); d.appendChild(main);
     log.appendChild(d); log.scrollTop = log.scrollHeight;
   }
   function addWhisper(from, to, text, time, dir) {
@@ -310,12 +373,16 @@
 
   ws.onopen = () => {
     wsReady = true;
-    $('nick').focus();
+    if (!pendingLogin) $('nick').focus();
     if (pendingLogin) { ws.send(JSON.stringify(pendingLogin)); pendingLogin = null; }
   };
   ws.onmessage = (e) => {
     const m = JSON.parse(e.data);
-    if (m.type === 'welcome') { myName = m.name; myRole = m.role || 'user'; curChannel = m.channel; $('nick').value = myName; $('loginView').style.display = 'none'; applyRole(); }
+    if (m.type === 'welcome') {
+      myName = m.name; myRole = m.role || 'user'; curChannel = m.channel;
+      $('nick').value = myName; $('loginView').style.display = 'none'; applyRole();
+      if (m.notice) { $('roomNotice').style.display = 'block'; $('roomNotice').textContent = '📢 ' + m.notice; }
+    }
     else if (m.type === 'login_fail') { $('loginErr').textContent = m.reason || '登录失败'; }
     else if (m.type === 'users') { renderUsers(m.list); }
     else if (m.type === 'history') { log.innerHTML = ''; lastDate = null; addSys('— 以下为历史消息 —'); (m.messages || []).forEach(x => addMsg(x.name, x.text, x.time, x.date, x.image, x.id)); }
@@ -324,6 +391,9 @@
     else if (m.type === 'mention') { addSys(`💬 ${m.from} @了你：${m.text}`); document.title = '💬 有人@你'; setTimeout(() => document.title = '聊天室', 3000); }
     else if (m.type === 'whisper') { addWhisper(m.from, m.to, m.text, m.time, m.dir); }
     else if (m.type === 'sys') { addSys(m.text); }
+    else if (m.type === 'notice') { const el = $('roomNotice'); if (m.text) { el.style.display = 'block'; el.textContent = '📢 ' + m.text; } else { el.style.display = 'none'; } }
+    else if (m.type === 'typing') { typingUsers[m.name] = Date.now() + 3500; updateTyping(); setTimeout(updateTyping, 3600); }
+    else if (m.type === 'typing_stop') { delete typingUsers[m.name]; updateTyping(); }
     else if (m.type === 'admin_recent') { adminFeed = m.messages || []; if ($('adminView').style.display !== 'none') renderAdmin(); }
     else if (m.type === 'admin_msg') { adminFeed.push(m); if (adminFeed.length > 100) adminFeed.shift(); if ($('adminView').style.display !== 'none') renderAdmin(); }
     else if (m.type === 'admin_geo') { const el = document.querySelector('#adminList [data-id="' + m.id + '"] .geo'); if (el) el.textContent = '📍 ' + m.geo; }
@@ -332,13 +402,24 @@
     else if (m.type === 'chess_wait' || m.type === 'chess_start' || m.type === 'chess_state' || m.type === 'chess_err' || m.type === 'chess_end') { if (window.ChessGame) window.ChessGame.handle(m); }
   };
 
+  function updateTyping() {
+    const now = Date.now();
+    const names = Object.keys(typingUsers).filter(n => typingUsers[n] > now);
+    $('typing').textContent = names.length ? (names.join('、') + ' 正在输入…') : '';
+  }
+
   function renderUsers(list) {
     const ul = $('users'); ul.innerHTML = '';
-    (list || []).forEach(n => {
+    const arr = list || [];
+    const cnt = $('side').querySelector('.cnt'); if (cnt) cnt.textContent = arr.length;
+    arr.forEach(n => {
       const li = document.createElement('li');
-      const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = '● ' + n;
-      nm.onclick = () => { $('text').value = '/w ' + n + ' '; $('text').focus(); };
-      li.appendChild(nm);
+      const dot = document.createElement('span'); dot.className = 'dot';
+      const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = n.name;
+      nm.onclick = () => { $('text').value = '/w ' + n.name + ' '; $('text').focus(); };
+      const rl = document.createElement('span'); rl.className = 'rl';
+      rl.textContent = n.role === 'admin' ? '👑' : n.role === 'guest' ? '访客' : '';
+      li.appendChild(dot); li.appendChild(nm); li.appendChild(rl);
       ul.appendChild(li);
     });
   }
@@ -354,6 +435,13 @@
   }
   $('send').onclick = sendMsg;
   $('text').addEventListener('keydown', e => { if (e.key === 'Enter') sendMsg(); });
+  $('text').addEventListener('input', () => {
+    if (myRole === 'guest') return;
+    const now = Date.now();
+    if (!typingSent || now - lastTyping > 1500) { ws.send(JSON.stringify({ type: 'typing' })); typingSent = true; lastTyping = now; }
+    clearTimeout(typingTimer);
+    typingTimer = setTimeout(() => { ws.send(JSON.stringify({ type: 'typing_stop' })); typingSent = false; }, 2500);
+  });
   $('nick').addEventListener('change', () => { const n = $('nick').value.trim(); if (n && n !== myName) { ws.send(JSON.stringify({ type: 'join', name: n })); myName = n; } });
 
   // 表情面板
@@ -372,7 +460,7 @@
     $('fileInput').value = '';
   };
 
-  // 移动端抽屉：在线列表
+  // 移动端抽屉：在线成员（右侧）
   $('menuBtn').onclick = () => { $('side').classList.add('open'); $('overlay').classList.add('show'); };
   $('sideClose').onclick = () => { $('side').classList.remove('open'); $('overlay').classList.remove('show'); };
   $('overlay').onclick = () => { $('side').classList.remove('open'); $('overlay').classList.remove('show'); };
@@ -398,7 +486,7 @@
       $('gameBtn').style.display = 'none';
       $('nick').disabled = true;
       const b = document.createElement('div'); b.id = 'guestBanner';
-      b.style.cssText = 'background:#1a2030;color:#9aa3b2;font-size:12px;text-align:center;padding:6px 12px;border-bottom:1px solid #232733;';
+      b.style.cssText = 'background:#eef0f3;color:#8a909c;font-size:12px;text-align:center;padding:6px 12px;border-bottom:1px solid var(--border);';
       b.textContent = '访客模式：仅可查看消息，无法发言或操作';
       $('main').insertBefore(b, $('bar'));
     } else if (myRole === 'admin') {
@@ -411,10 +499,14 @@
   // ===================== 管理员控制台 =====================
   $('adminBtn').onclick = () => { $('adminView').style.display = 'flex'; renderAdmin(); };
   $('adminClose').onclick = () => { $('adminView').style.display = 'none'; };
+  $('setNoticeBtn').onclick = () => {
+    const t = prompt('设置群公告（留空清除）：', ($('roomNotice').textContent || '').replace(/^📢\s*/, ''));
+    if (t !== null) ws.send(JSON.stringify({ type: 'set_notice', text: t }));
+  };
   // ===================== 在线数据 / 主题色 =====================
   $('statsBtn').onclick = () => {
     $('statsView').style.display = 'flex';
-    const cur = (getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()) || '#8ab4ff';
+    const cur = (getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()) || '#1296db';
     $('colorPick').value = cur;
     if (lastStats) renderStats(lastStats); else $('chart').innerHTML = '<div class="empty">数据采集中…（每 5 秒采样）</div>';
   };
@@ -467,18 +559,18 @@
     const n = hist.length;
     const x = i => pad + (W - 2 * pad) * (i / (n - 1));
     const y = v => (H - pad) - (H - 2 * pad) * ((v - minC) / (maxC - minC || 1));
-    const accent = (getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()) || '#8ab4ff';
+    const accent = (getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()) || '#1296db';
     const pts = hist.map((h, i) => x(i).toFixed(1) + ',' + y(h.count).toFixed(1)).join(' ');
     const area = x(0).toFixed(1) + ',' + (H - pad) + ' ' + pts + ' ' + x(n - 1).toFixed(1) + ',' + (H - pad);
     let dots = ''; const step = Math.max(1, Math.ceil(n / 8));
     hist.forEach((h, i) => { if (i % step === 0) dots += '<circle cx="' + x(i).toFixed(1) + '" cy="' + y(h.count).toFixed(1) + '" r="2.2" fill="' + accent + '"/>'; });
     box.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" height="100%" preserveAspectRatio="none">'
-      + '<line x1="' + pad + '" y1="' + (H - pad) + '" x2="' + (W - pad) + '" y2="' + (H - pad) + '" stroke="#232733" stroke-width="1"/>'
+      + '<line x1="' + pad + '" y1="' + (H - pad) + '" x2="' + (W - pad) + '" y2="' + (H - pad) + '" stroke="#e6e8eb" stroke-width="1"/>'
       + '<polygon points="' + area + '" fill="' + accent + '22"/>'
       + '<polyline points="' + pts + '" fill="none" stroke="' + accent + '" stroke-width="2" stroke-linejoin="round"/>'
       + dots
-      + '<text x="' + (W - pad) + '" y="14" fill="#9aa3b2" font-size="11" text-anchor="end">峰值 ' + maxC + '</text>'
-      + '<text x="' + pad + '" y="14" fill="#9aa3b2" font-size="11">当前 ' + counts[n - 1] + '</text>'
+      + '<text x="' + (W - pad) + '" y="14" fill="#8a909c" font-size="11" text-anchor="end">峰值 ' + maxC + '</text>'
+      + '<text x="' + pad + '" y="14" fill="#8a909c" font-size="11">当前 ' + counts[n - 1] + '</text>'
       + '</svg>';
   }
 </script>
